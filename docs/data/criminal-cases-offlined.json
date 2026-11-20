@@ -1,0 +1,56 @@
+{
+  "archivedAt": "2026-11-18T05:43:05.539Z",
+  "note": "刑事案例下线前的状态存档；恢复：UPDATE cases SET status='published' WHERE id IN (...)",
+  "cases": [
+    {
+      "id": "024a9411-678b-4fa8-97d5-73e46e9eb595",
+      "name": "缅北果敢四大家族系列电诈及关联犯罪案",
+      "status": "published"
+    },
+    {
+      "id": "5d680e15-bd9c-4c78-9dfb-f632f8044d7e",
+      "name": "赵某超离婚冷静期故意杀人案",
+      "status": "published"
+    },
+    {
+      "id": "4b846673-cfcb-4c8c-9507-ced77ef38453",
+      "name": "温庆运以危险方法危害公共安全案",
+      "status": "published"
+    },
+    {
+      "id": "22ece332-4bca-42d8-8941-accc5daa02e4",
+      "name": "3·10邯郸初中生杀害掩埋同学案",
+      "status": "published"
+    },
+    {
+      "id": "9b2a2868-7d42-46b1-9a0c-bea79e514c93",
+      "name": "辽宁盘锦鹏程幼儿园张某虐童案",
+      "status": "published"
+    },
+    {
+      "id": "4f92369f-bac7-4f9a-98e3-2a3584e4ea55",
+      "name": "李铁、陈戌源等足球领域系列腐败案",
+      "status": "published"
+    },
+    {
+      "id": "64e55416-1310-455f-b3f8-3ce592d7aca3",
+      "name": "游族网络许垚故意杀人、投放危险物质案",
+      "status": "published"
+    },
+    {
+      "id": "129caf29-b85d-43c7-a6b1-66f0a5cb897d",
+      "name": "刘学州被拐卖及遭网暴致死案",
+      "status": "published"
+    },
+    {
+      "id": "b29d4d15-5c64-494d-a21e-91944bb3a534",
+      "name": "车超、李勇等强奸、故意杀人、伪证案",
+      "status": "published"
+    },
+    {
+      "id": "3c056163-4863-471a-87b0-2ed95dc3bc88",
+      "name": "余华英拐卖儿童案",
+      "status": "published"
+    }
+  ]
+}

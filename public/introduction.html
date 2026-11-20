@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模拟法庭教学系统 · 应用介绍</title>
+<style>
+  :root {
+    --bg: #f6f1e6;
+    --card: #fffdf7;
+    --ink: #3a2e1f;
+    --muted: #85755c;
+    --brass: #a0762a;
+    --brass-deep: #7d5c1d;
+    --line: #e3d7bd;
+    --soft: #efe7d4;
+    --danger: #9c3d2e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.9;
+    font-size: 17px;
+  }
+  .serif { font-family: "Noto Serif SC", "SimSun", serif; }
+
+  /* 顶部仪式区 */
+  header {
+    background: #2e2417;
+    color: #f3ead6;
+    padding: 72px 24px 56px;
+    text-align: center;
+    position: relative;
+  }
+  header::before {
+    content: "";
+    position: absolute; inset: 10px;
+    border: 1px solid rgba(214, 178, 106, 0.35);
+    pointer-events: none;
+  }
+  .crest { width: 84px; height: 84px; margin: 0 auto 20px; display: block; }
+  .eyebrow {
+    letter-spacing: 0.55em; text-indent: 0.55em;
+    font-size: 13px; color: #c9a86a; margin-bottom: 18px;
+  }
+  header h1 {
+    font-family: "Noto Serif SC", "SimSun", serif;
+    font-size: 42px; font-weight: 700; letter-spacing: 0.12em;
+  }
+  header h1::after {
+    content: ""; display: block; width: 72px; height: 2px;
+    background: #c9a86a; margin: 22px auto 0;
+  }
+  header p.sub { margin-top: 20px; font-size: 16px; color: #d8c9a8; max-width: 720px; margin-left: auto; margin-right: auto; }
+  header .meta { margin-top: 26px; font-size: 13px; color: #9c8b6b; letter-spacing: 0.2em; }
+
+  /* 标签栏 */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255, 253, 247, 0.97);
+    border-bottom: 2px solid var(--line);
+    box-shadow: 0 2px 12px rgba(62, 47, 26, 0.08);
+  }
+  .tabs {
+    max-width: 1060px; margin: 0 auto; display: flex;
+    flex-wrap: wrap; padding: 0 12px;
+  }
+  .tab-btn {
+    flex: 1 1 auto; min-width: 150px;
+    background: none; border: none; cursor: pointer;
+    padding: 17px 10px 15px;
+    font-size: 16px; font-weight: 600; color: var(--muted);
+    border-bottom: 3px solid transparent;
+    letter-spacing: 0.06em;
+    transition: color 0.25s, border-color 0.25s;
+    font-family: inherit;
+  }
+  .tab-btn .no { display: block; font-size: 12px; font-weight: 400; color: #b3a284; letter-spacing: 0.25em; margin-bottom: 3px; }
+  .tab-btn:hover { color: var(--brass-deep); }
+  .tab-btn.active { color: var(--brass-deep); border-bottom-color: var(--brass); }
+  .tab-btn.active .no { color: var(--brass); }
+
+  /* 内容区 */
+  main { max-width: 1060px; margin: 0 auto; padding: 48px 24px 90px; }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .panel-head { text-align: center; margin-bottom: 38px; }
+  .panel-head .kicker { color: var(--brass); font-size: 13px; letter-spacing: 0.4em; text-indent: 0.4em; margin-bottom: 10px; }
+  .panel-head h2 {
+    font-family: "Noto Serif SC", "SimSun", serif;
+    font-size: 30px; font-weight: 700; letter-spacing: 0.08em;
+  }
+  .panel-head .rule { width: 52px; height: 2px; background: var(--brass); margin: 16px auto 0; }
+  .panel-head p.lead { margin-top: 16px; color: var(--muted); font-size: 15px; max-width: 760px; margin-left: auto; margin-right: auto; }
+
+  section.block {
+    background: var(--card); border: 1px solid var(--line);
+    padding: 34px 38px; margin-bottom: 30px;
+    border-top: 3px solid var(--brass);
+  }
+  section.block > h3 {
+    font-family: "Noto Serif SC", "SimSun", serif;
+    font-size: 22px; margin-bottom: 6px; letter-spacing: 0.05em;
+    display: flex; align-items: center; gap: 12px;
+  }
+  section.block > h3::before { content: ""; width: 5px; height: 22px; background: var(--brass); flex: none; }
+  section.block > .en { font-size: 12px; color: #b3a284; letter-spacing: 0.2em; margin-bottom: 18px; padding-left: 17px; }
+  section.block h4 { font-size: 18px; margin: 22px 0 8px; color: var(--brass-deep); }
+  section.block h4 .tag-inline { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 8px; }
+  section.block p { margin: 10px 0; text-align: justify; }
+  section.block ul, section.block ol { margin: 10px 0 10px 2em; }
+  section.block li { margin: 7px 0; text-align: justify; }
+  section.block strong { color: var(--brass-deep); }
+
+  .quote {
+    background: var(--soft); border-left: 4px solid var(--brass);
+    padding: 18px 24px; margin: 18px 0;
+    font-family: "Noto Serif SC", "SimSun", serif;
+    font-size: 17px; color: #5b4a2f;
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin: 16px 0; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .mini {
+    background: #fbf7ec; border: 1px solid var(--line); padding: 18px 20px;
+  }
+  .mini h5 { font-size: 15px; color: var(--brass-deep); margin-bottom: 8px; letter-spacing: 0.04em; }
+  .mini p, .mini li { font-size: 14.5px; line-height: 1.8; color: #5f5138; }
+  .mini ul { margin-left: 1.2em; }
+
+  table.flow { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14.5px; }
+  table.flow th {
+    background: #2e2417; color: #e8d9b0; padding: 10px 12px;
+    font-weight: 600; letter-spacing: 0.05em; text-align: left; white-space: nowrap;
+  }
+  table.flow td { border: 1px solid var(--line); padding: 10px 12px; vertical-align: top; background: #fffdf7; }
+  table.flow tr td:first-child { font-weight: 700; color: var(--brass-deep); white-space: nowrap; }
+  table.flow td .op { color: var(--ink); }
+  table.flow td .vo { color: #4a3d28; }
+  .badge {
+    display: inline-block; padding: 1px 10px; border-radius: 3px;
+    background: rgba(160, 118, 42, 0.12); color: var(--brass-deep);
+    font-size: 12.5px; font-weight: 600; margin-right: 6px; white-space: nowrap;
+  }
+  .step { color: #9c8b6b; font-family: "Noto Serif SC", serif; margin-right: 6px; }
+
+  .role-route {
+    display: flex; align-items: flex-start; gap: 10px; margin: 8px 0;
+    padding: 12px 16px; background: #fbf7ec; border: 1px solid var(--line);
+  }
+  .role-route .rr { flex: none; width: 86px; font-weight: 700; color: var(--brass-deep); font-size: 15px; padding-top: 2px; }
+  .role-route .rp { font-size: 14.5px; color: #5f5138; line-height: 1.85; }
+
+  footer {
+    background: #2e2417; color: #9c8b6b; text-align: center;
+    padding: 30px 20px; font-size: 13px; letter-spacing: 0.15em;
+  }
+  .kbd {
+    display: inline-block; padding: 0 7px; border: 1px solid #cbbd9d; border-bottom-width: 2px;
+    border-radius: 4px; background: #fbf7ec; font-size: 13px; color: #6b5a3c;
+    font-family: Consolas, monospace; margin: 0 2px; white-space: nowrap;
+  }
+  .scene-marker {
+    font-size: 12px; letter-spacing: 0.3em; color: var(--brass);
+    border-top: 1px solid var(--line); padding-top: 14px; margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="crest" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+    <circle cx="50" cy="50" r="46" stroke="#c9a86a" stroke-width="2.5"/>
+    <circle cx="50" cy="50" r="40" stroke="#c9a86a" stroke-width="0.8" stroke-dasharray="2 3"/>
+    <line x1="50" y1="22" x2="50" y2="76" stroke="#c9a86a" stroke-width="2.5"/>
+    <line x1="26" y1="30" x2="74" y2="30" stroke="#c9a86a" stroke-width="2.5"/>
+    <line x1="26" y1="30" x2="14" y2="58" stroke="#c9a86a" stroke-width="1.4"/>
+    <line x1="26" y1="30" x2="38" y2="58" stroke="#c9a86a" stroke-width="1.4"/>
+    <line x1="74" y1="30" x2="62" y2="58" stroke="#c9a86a" stroke-width="1.4"/>
+    <line x1="74" y1="30" x2="86" y2="58" stroke="#c9a86a" stroke-width="1.4"/>
+    <path d="M8 58 H44 M56 58 H92" stroke="#c9a86a" stroke-width="1.6"/>
+    <path d="M14 58 a12 12 0 0 0 24 0 Z" fill="none" stroke="#c9a86a" stroke-width="1.6"/>
+    <path d="M62 58 a12 12 0 0 0 24 0 Z" fill="none" stroke="#c9a86a" stroke-width="1.6"/>
+    <rect x="34" y="76" width="32" height="6" fill="#c9a86a" opacity="0.85"/>
+  </svg>
+  <div class="eyebrow">MOOT COURT TEACHING SYSTEM</div>
+  <h1>模拟法庭教学系统</h1>
+  <p class="sub">AI 驱动的沉浸式法律实训平台 —— 教师一句话生成完整案卷，学生在真实大案中扮演辩护人、公诉人与审判长，从案例研习到宣判闭庭完成全流程实战训练，全程语音交互、量化评分、学情可视。</p>
+  <div class="meta">应用介绍 · 宣传文案 · 讲解逐字稿 · 视频脚本 · 视频讲稿 · 建设过程</div>
+</header>
+
+<nav>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="p1" onclick="showTab('p1', this)"><span class="no">壹</span>应用全面介绍</button>
+    <button class="tab-btn" data-tab="p2" onclick="showTab('p2', this)"><span class="no">贰</span>宣传文案</button>
+    <button class="tab-btn" data-tab="p3" onclick="showTab('p3', this)"><span class="no">叁</span>讲解逐字稿</button>
+    <button class="tab-btn" data-tab="p4" onclick="showTab('p4', this)"><span class="no">肆</span>视频操作脚本</button>
+    <button class="tab-btn" data-tab="p5" onclick="showTab('p5', this)"><span class="no">伍</span>视频文字讲稿</button>
+    <button class="tab-btn" data-tab="p6" onclick="showTab('p6', this)"><span class="no">陆</span>建设过程</button>
+  </div>
+</nav>
+
+<main>
+
+<!-- ============ 标签一：应用全面介绍 ============ -->
+<div class="panel active" id="p1">
+  <div class="panel-head">
+    <div class="kicker">OVERVIEW</div>
+    <h2>应用全面介绍</h2>
+    <div class="rule"></div>
+    <p class="lead">本篇从"所要解决的问题"出发，完整呈现系统的建设内容与实现功能，供院校领导、教学管理者、一线教师与技术人员全面了解本系统的定位、能力与价值。</p>
+  </div>
+
+  <section class="block">
+    <h3>一、所要解决的问题：法学教育的"最后一公里"</h3>
+    <div class="en">THE PROBLEM</div>
+    <p>法学的生命力不在书本里，而在法庭上。然而在绝大多数院校的现实教学中，从"学过法律"到"会用法律"之间，横亘着一道难以逾越的鸿沟。本系统的建设，正是为了打通这条"最后一公里"。它要解决的问题，具体而言有六个：</p>
+
+    <h4>1. 实务训练机会稀缺：一场模拟法庭，一年轮不到几次</h4>
+    <p>传统模拟法庭依赖实体场地、课时安排与多方人员协调，一学期能组织的正式演练屈指可数；而各类模拟法庭竞赛门槛高、名额少，能真正"上场"的学生永远是极少数。多数法学生直到毕业，都没有完整经历过一次刑事庭审的全过程——公诉人如何讯问、辩护人如何质证、审判长如何驾驭庭审，对他们而言只是教科书上的文字描述。</p>
+
+    <h4>2. 对手与陪练缺位：和同学互演，专业深度不够</h4>
+    <p>即便组织了模拟法庭，传统模式下公诉人、辩护人、审判长均由学生互相扮演。学生对手的法律功底与临场反应参差不齐，"陪练"质量无法保证——质证环节问不出要害，辩论环节接不住话锋，庭审往往流于照本宣科的念稿，训练价值大打折扣。</p>
+
+    <h4>3. 案例资源建设成本高：一套完整案卷，教师要写数周</h4>
+    <p>高质量的模拟法庭训练需要完整、严谨的案卷材料：案情简介、诉讼文书卷、询问笔录、证据材料、相关法条与司法解释，缺一不可。教师手工编写一套案卷动辄数周，且难以保证证据链的完整性与法律适用的准确性。案例库的扩充速度，直接制约了实训的广度与新鲜度。</p>
+
+    <h4>4. 训练过程无沉淀：庭审散场，一切归零</h4>
+    <p>口头训练的最大特点是稍纵即逝。一次模拟庭审结束后，学生说了什么、错在哪里、哪次质证精彩、哪处程序违规，若无专人全程记录，几乎无法复盘。训练不留痕，进步就无从谈起。</p>
+
+    <h4>5. 评价标准难统一：打分凭印象，反馈不及时</h4>
+    <p>学生的庭审表现如何量化？多数院校缺乏细化的评分标准，教师打分往往凭整体印象；即便有标准，也难以在庭审进行中逐项对照。更关键的是，反馈往往滞后数日，学生早已忘了当时的临场状态，错过了最佳的纠错时机。</p>
+
+    <h4>6. 理论与实践脱节：法条背得滚瓜烂熟，庭上找不到用武之地</h4>
+    <p>学生可以在试卷上默写刑法条文，却难以在质证时准确援引证据规则；可以背诵正当防卫的构成要件，却无法在辩护词中围绕案件事实组织有效论证。从"知道"到"会用"，需要的是在高仿真情境中的反复锤炼。</p>
+
+    <div class="quote">一句话概括：让每一个法学生，都能随时、反复、低成本地站上"真实的"法庭，与高水平的 AI 对手交锋，并在每一次训练后获得量化的成绩与具体的改进建议——这就是本系统存在的意义。</div>
+  </section>
+
+  <section class="block">
+    <h3>二、解决方案总览：AI 驱动的全流程模拟法庭</h3>
+    <div class="en">THE SOLUTION</div>
+    <p>本系统是一个面向法学教育的<strong>沉浸式模拟法庭实训平台</strong>，以"教师设计案例、学生角色实训、AI 全程陪练、数据量化评价"为核心闭环。它把一间法庭搬进了浏览器，也把一位不知疲倦、业务精湛的 AI 律师团队搬到了学生对面。</p>
+    <div class="grid2">
+      <div class="mini">
+        <h5>对教师而言</h5>
+        <p>从"组织者"变为"设计师"：只需填写一段案例设计需求，AI 工作流约十分钟即生成包含案情、卷宗、证据、法条在内的十四字段完整案卷；发布案例后系统再自动生成各角色的法律文书样例；全班学情一屏尽览。</p>
+      </div>
+      <div class="mini">
+        <h5>对学生而言</h5>
+        <p>从"旁观者"变为"执庭者"：选择辩护人、公诉人或审判长任一角色，沉浸式走完从案例研习、文书撰写，到法庭调查、法庭辩论，再到评议宣判的完整庭审流程，全程可听、可说、可写、可评分。</p>
+      </div>
+    </div>
+    <p>整个系统的技术底座由四层构成：<strong>大模型对话层</strong>（豆包大模型，全程流式输出，扮演审判长、公诉人、辩护人、陪审员、书记员等全部对手角色）、<strong>语音交互层</strong>（AI 回复自动语音播报，学生按住说话语音输入）、<strong>知识支撑层</strong>（法条检索系统 + 庭审流程知识库 + 评分标准知识库）、<strong>数据管理层</strong>（训练记录持久化、学情统计分析）。</p>
+  </section>
+
+  <section class="block">
+    <h3>三、建设的具体内容：六大子系统</h3>
+    <div class="en">WHAT WE BUILT</div>
+
+    <h4>1. 教师端"案例工场"：从一句话需求到一套完整案卷</h4>
+    <p>教师主页将<strong>学情区与案例设计区合为一页</strong>。教师只需填写案例设计需求（如"设计一起涉及正当防卫争议的故意伤害案"），系统即触发 AI 工作流异步生成案例——约十分钟后，一套包含<strong>案件基本资料、教学目标、案情事实、诉讼文书卷、询问笔录、证据材料、相关法条、案件亮点、易错点</strong>等十四个字段的完整案卷即告生成。生成过程中教师可离开页面，系统支持<strong>断点恢复</strong>：刷新或重新登录后自动检测未完成的生成任务并继续跟进。案卷生成后可在案例详情页<strong>三栏可编辑</strong>，教师逐项审校修改后一键发布；发布时再次触发文书工作流，自动生成起诉书、公诉意见书、辩护词等<strong>法律文书样例</strong>，作为学生训练达标后的参照范本。案例支持发布、下线、删除的完整生命周期管理。</p>
+    <p>当前线上案例库已包含多起改编自真实社会热点的大案要案：<strong>余华英拐卖儿童案、刘学州被拐卖及遭网暴致死案、游族网络许垚故意杀人及投放危险物质案、李铁与陈戌源等足球领域系列腐败案、3·10 邯郸初中生杀害掩埋同学案、缅北果敢四大家族系列电诈及关联犯罪案、赵某超离婚冷静期故意杀人案</strong>等，题材覆盖故意伤害（含正当防卫争议）、拐卖儿童、故意杀人、投放危险物质、职务犯罪、未成年人犯罪、网络暴力、电诈关联犯罪等多个罪名领域，事实认定与法律适用均具有丰富的训练价值与课堂讨论空间。</p>
+
+    <h4>2. 学生端三条角色实训路线：每一种角色都是一次完整的职业预演</h4>
+    <p>学生选定角色与案例后，系统按角色推送不同的实训路线，各环节层层递进、环环相扣：</p>
+    <div class="role-route"><div class="rr">辩护人</div><div class="rp">案例研习（9 个研习问题 + AI 助手）→ 辩护词撰写（对话引导 / 编辑撰写 / AI 评价三段式）→ 法庭调查（对公诉人举证进行质证）→ 法庭辩论（与 AI 公诉人交锋）→ 被告人最后陈述 → 宣判 → 闭庭</div></div>
+    <div class="role-route"><div class="rr">公诉人</div><div class="rp">案例研习（9 个研习问题 + AI 助手）→ 刑事起诉书撰写 → 公诉意见书撰写 → 法庭调查（举证示证）→ 法庭辩论（与 AI 辩护人交锋）→ 被告人最后陈述 → 宣判 → 闭庭</div></div>
+    <div class="role-route"><div class="rr">审判长</div><div class="rp">案例研习 → 起诉审查（4 列 10 问题审查起诉书）→ 庭审提纲撰写（4 列编辑器）→ 开庭（庭前输入 + 书记员流程主持）→ 法庭调查（13 阶段主持）→ 法庭辩论（8 阶段主持）→ 被告人最后陈述 → 评议讨论（合议庭三栏并行）→ 宣判与闭庭</div></div>
+    <p>三条路线不是简单的页面串联，而是<strong>贯穿始终的"庭审感"</strong>：每个阶段都有庄重的流程解说页（开庭、宣判、闭庭等使用全屏仪式页面，配国漫风格法庭背景图），角色的每一次发言都有立绘画像与语音；审判长路线更有完整的 13 阶段法庭调查、8 阶段法庭辩论的主持节奏训练——什么时候宣布进入下一阶段、什么时候传唤被告人、什么时候组织控辩双方围绕新证据展开对质，全部由学生以审判长身份亲手驾驭。</p>
+
+    <h4>3. AI 交互引擎：流式输出 + 角色扮演 + 环节知识注入</h4>
+    <p>系统接入了豆包大模型，所有 AI 对话均以 <strong>SSE 流式输出</strong>逐字呈现，配合打字机式渲染，营造真实的"正在陈述"现场感。AI 并非通用聊天机器人，而是深度角色扮演：<strong>扮演公诉人时言辞缜密、步步紧逼；扮演辩护人时善用证据规则、寻找程序瑕疵；扮演审判长时居中驾驭、用语规范；评议阶段的两位陪审员（一男一女双音色）则会从社会经验与常识判断的角度发表合议意见</strong>。每个环节的提示词均注入了对应的<strong>庭审流程知识库</strong>（开庭步骤、法庭调查操作步骤、法庭辩论步骤、宣判步骤、闭庭步骤与注意事项），确保 AI 的言行符合刑事诉讼程序规范。</p>
+    <p>多角色语音庭审页还有一个精心打磨的细节：<strong>等待态角色归属</strong>——当 AI 公诉人正在生成质证意见时，界面气泡会显示"公诉人正在思考…"而非笼统的"AI 正在输入"，角色沉浸感不因技术等待而中断。</p>
+
+    <h4>4. 语音交互系统：听得见的法庭，说得出的话语</h4>
+    <ul>
+      <li><strong>AI 语音播报（TTS）</strong>：AI 的每一段发言自动转为语音播报，不同角色配备不同音色（审判长、公诉人、辩护人、陪审员甲男声、陪审员乙女声），多角色庭审如同"广播剧"般轮番陈述；连续发言自动排队播放，用户开口说话时自动打断当前播报，还原真实庭审的发言权切换。</li>
+      <li><strong>语音输入（ASR）</strong>：学生"按住说话、松开发送"，语音即时转文字提交，在法庭辩论的紧张节奏中也能流畅表达。系统统一封装了录音、音频重采样（转 16kHz WAV）与识别的完整链路，十个语音页面共用一套交互。</li>
+      <li><strong>语音模式开关</strong>：语音与文字模式一键切换——安静环境（图书馆、机房）可切为纯文字模式，AI 静默输出；上课演示时可开语音全场播放。</li>
+    </ul>
+
+    <h4>5. 法条检索系统：随查随用的"掌上法典"</h4>
+    <p>训练全程的每一页头部都挂着天平图标的<strong>法条检索入口</strong>。点击进入整页检索：输入关键词（或点击"正当防卫""故意伤害""死刑适用"等快捷词），系统调用 AI 工作流检索，返回<strong>左栏法条卡片列表</strong>（条款号 + 罪名徽章 + 正文预览，点击进入法条详情）与<strong>右栏司法解释两层折叠目录</strong>（按关联法条分组，下钻分类节点）。法条正文由数据库直出渲染，条款号、罪名、款级结构、重点标注（★ 号）一望即知，检索结果的权威性与排版质量经过人工优化。学生在撰写辩护词时发现某个量刑情节拿不准，随时跳转检索《刑法》相应条文与司法解释，再返回继续写作——工具即装在法庭里。</p>
+
+    <h4>6. 评分标准与学情系统：让每一次训练都有据可查、有分可评、有径可循</h4>
+    <p>这是本系统区别于"聊天式演练"的核心竞争力：</p>
+    <ul>
+      <li><strong>总维度评分标准</strong>：五个维度——事实认定与证据运用（25%）、法律适用与论证（25%）、程序规范（20%）、语言表达与文书规范（15%）、职业伦理与法庭礼仪（15%），配优秀（90-100）/ 良好（75-89）/ 及格 / 不及格四档评级与各档行为描述。</li>
+      <li><strong>13 环节专项标准</strong>：案例研习、起诉审查、刑事起诉书撰写、公诉意见书撰写、辩护词撰写、庭审提纲撰写、开庭、法庭调查、法庭辩论、量刑协商、最后陈述、评议讨论、宣判——每个环节都定义了专属的考核要点（如"辩护词撰写"环节考核论点提炼、证据引用、法条援引、逻辑结构、文书规范五要点），且按通用 / 辩护人 / 公诉人 / 审判长区分适用角色。</li>
+      <li><strong>AI 评价注入标准</strong>：学生在写作页提交文书后，AI 的评分提示词中即注入本环节的评分标准，评分有据，建议具体。</li>
+      <li><strong>AI 样例解锁机制</strong>：单次评价 ≥ 60 分或累计评价 3 次后，解锁"AI 样例"按钮，可查看教师端发布案例时由工作流生成的专业文书范本，对照差距、学习范式——形成"训练、评价、对标、再训练"的完整学习闭环。</li>
+      <li><strong>学情可视</strong>：学生端可查看自己的训练历史（案例、角色、成绩、最后训练阶段、训练次数）；结束训练时系统自动生成<strong>学习过程总结、总体评价与改进建议</strong>；教师端按学生维度展开训练记录明细，并可一键生成 AI 学情分析。</li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h3>四、实现的功能全景</h3>
+    <div class="en">FEATURE MAP</div>
+    <table class="flow">
+      <tr><th style="width:130px">功能模块</th><th>具体功能点</th></tr>
+      <tr><td>登录认证</td><td class="op">超星单点登录实名认证（学生）；教师双门槛登录（教师密码 + 超星授权 + 服务端 HMAC 签名上下文，防绕过）；游客免登体验模式；httpOnly 会话 Cookie 安全管理</td></tr>
+      <tr><td>案例选择</td><td class="op">三角色卡片选择；案例列表与详情（案件介绍、训练价值）；只读评分标准预览（总维度 + 13 环节要点）；个人训练统计（最后训练时间、次数、阶段）</td></tr>
+      <tr><td>案例研习</td><td class="op">9 个角色视角研习问题引导；卷宗查看器（诉讼文书卷 / 询问笔录 / 证据材料二级菜单）；AI 助手对话（流式 + 语音）；生命周期时间轴展示案件从立案到审判的全过程；卷宗关键信息高亮标注</td></tr>
+      <tr><td>文书撰写</td><td class="op">辩护词 / 刑事起诉书 / 公诉意见书 / 庭审提纲四类文书；对话-编辑-评价三段式布局；AI 按环节评分标准打分并给出修改建议；写作大纲生成；AI 样例对照（达标解锁）；本环节评分标准查看</td></tr>
+      <tr><td>语音庭审</td><td class="op">法庭调查与法庭辩论的 AI 角色对话；角色立绘 + 发言气泡 + 语音播报；按住说话语音输入；等待态角色归属提示；庭审阶段进度与阶段切换</td></tr>
+      <tr><td>审判长主持</td><td class="op">起诉审查（4 列 10 问题）；庭审提纲（4 列编辑器）；开庭全屏流程（庭前输入、书记员工作、法庭纪律宣读）；法庭调查 13 阶段主持；法庭辩论 8 阶段主持；评议讨论三栏（讨论 52% / 判决书 26% / 判决书评价 22%）并行推进；合议庭双陪审员双音色发言</td></tr>
+      <tr><td>判决生成</td><td class="op">最后陈述后由 AI 工作流生成正式判决书（含事实认定、证据采信、法律适用、量刑理由）；宣判与闭庭全屏仪式页</td></tr>
+      <tr><td>法条检索</td><td class="op">关键词 + 快捷词检索；法条卡片列表与详情视图；司法解释两层折叠目录；正文符号化排版（条款分级、重点星标）；两层滚动布局（页面框架固定、双栏独立滚动）</td></tr>
+      <tr><td>学习记录</td><td class="op">训练全程留痕；结束训练自动生成总结 / 评价 / 建议；学习记录详情回看；教师端按学生 / 案例维度统计</td></tr>
+      <tr><td>教师工作台</td><td class="op">案例设计（需求驱动 AI 生成 + 断点恢复）；案卷三栏编辑；发布 / 下线 / 删除；评分标准独立编辑大页面（维度、权重、评级、13 环节、解锁阈值，支持 AI 按本案资料重新生成）；学情三栏查看 + AI 学情分析</td></tr>
+      <tr><td>体验定制</td><td class="op">5 种背景主题（清雅白 / 暖阳米 / 森林绿 / 藏蓝韵 / 古韵宣）；3 种字体（雅黑 / 黑体 / 宋体）；4 档字号全局缩放；右下角流程提示悬浮球与悬浮框（可拖拽）</td></tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>五、技术架构与工程亮点</h3>
+    <div class="en">TECHNOLOGY</div>
+    <p>系统采用 <strong>Next.js 16（App Router）+ React 19 + TypeScript 5</strong> 前端框架，<strong>shadcn/ui + Tailwind CSS 4</strong> 组件与样式体系，<strong>Zustand</strong> 全局状态管理，<strong>Supabase PostgreSQL + Drizzle ORM</strong> 数据持久层；AI 能力上，对话走豆包大模型的 SSE 流式接口，语音合成与语音识别走 coze-coding-dev-sdk，案例生成、文书生成、判决书生成、法条检索四大任务交给 Coze 平台工作流异步执行并轮询结果。整站部署为一套前后端一体的 Web 服务。</p>
+    <p>若干值得说明的工程细节：<strong>流式输出做了并发防护</strong>（React 开发模式下的双挂载不会产生两股字符流交织的乱码）；<strong>法条检索采用两层滚动布局</strong>（页面框架一屏固定，双栏内容各自内滚，目录展开再多也不拉长页面）；<strong>主题切换做了首帧预绘</strong>（刷新页面不闪白）；<strong>悬浮提示框拖拽采用零重渲染优化</strong>（拖拽期间直接写 DOM，流式输出页面也丝滑流畅）；<strong>录音统一转 16kHz WAV</strong>（保障国内可用的语音识别链路）。这些细节共同保证了训练过程的顺滑与稳定。</p>
+  </section>
+
+  <section class="block">
+    <h3>六、应用价值</h3>
+    <div class="en">THE VALUE</div>
+    <div class="grid2">
+      <div class="mini">
+        <h5>对学生</h5>
+        <ul>
+          <li>从"看过法庭"到"上过法庭"：毕业前完成多轮完整庭审实战</li>
+          <li>三种角色任选，理解控辩审三方的职业思维与立场差异</li>
+          <li>真实大案改编训练，直面社会热点中的复杂法律争议</li>
+          <li>量化评分 + AI 建议 + 样例对照，进步路径清晰可见</li>
+        </ul>
+      </div>
+      <div class="mini">
+        <h5>对教师</h5>
+        <ul>
+          <li>案例建设从数周缩短到十分钟量级</li>
+          <li>评分标准透明统一，AI 评价有据可依</li>
+          <li>全班学情数据化，教学干预有的放矢</li>
+          <li>把精力从"组织流程"转向"点拨思维"</li>
+        </ul>
+      </div>
+      <div class="mini">
+        <h5>对院校</h5>
+        <ul>
+          <li>一套系统替代场地、人员、剧本的全部协调成本</li>
+          <li>实训频次从"学期级"提升到"随时级"</li>
+          <li>与超星教学平台账号体系无缝衔接</li>
+          <li>沉淀可复盘、可分析、可展示的教学数据资产</li>
+        </ul>
+      </div>
+      <div class="mini">
+        <h5>对法学教育</h5>
+        <ul>
+          <li>弥合理论与实务的断层，让程序法"活"起来</li>
+          <li>以真实热点案件涵养职业伦理与法治价值判断</li>
+          <li>为规模化、标准化的法律实务实训提供基础设施</li>
+          <li>探索"AI + 法学"教学改革的可复制范式</li>
+        </ul>
+      </div>
+    </div>
+    <div class="sec-title"><span class="sec-no">远期图景</span>从一间法庭，到一片教学新生态</div>
+    <p>面向未来，本系统在三个方向上预留了生长空间：<strong>案例生态</strong>——教师端工作流已支持按教学需求批量生成新案卷，未来可建设跨校共享的"案例资源池"，让一线教师的教学智慧沉淀为可复用的数字资产；<strong>能力档案</strong>——十三环节的过程性数据天然构成学生的"实务能力图谱"，可对接实习推荐、法律职业资格考试的个性化诊断，让评价从"一门课的分数"进化为"四年的成长曲线"；<strong>课堂协同</strong>——同一案件下的多角色联动已在路线图中，届时一场模拟庭审可以由真实的同学分饰控辩审三方，AI 退居书记员与点评席，实现"真人对抗 + AI 陪练"的混合教学形态。</p>
+    <p>但无论形态如何演进，三条底线不变：教学价值优先于技术炫示、真实案例优先于虚构噱头、学生成长优先于管理便利。这是本系统从第一行代码起就立下的原则，也是它区别于"又一个软件"的根本所在。</p>
+    <div class="quote">法庭不是远方的舞台，而是眼前的课堂。本系统所做的全部努力，归结为一句话：让每一位法学生，在走出校园之前，都能真正地"执槌一次、辩护一次、公诉一次"。</div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">教学实践专论</span>优化教学的十二项具体实践</div>
+    <p>以上是系统的全貌。但一座法庭何以成为一间好课堂？靠的不是把流程搬上屏幕，而是把<strong>"教学"二字拆解到每一次交互、每一次评分、每一句 AI 回应之中</strong>。以下十二项具体实践，是本系统区别于普通"演示软件"的根本所在，也是我们在一线教学中反复验证、反复打磨的成果。</p>
+
+    <h3>实践一：把"一次庭审"拆成"十三级台阶"——脚手架式教学法</h3>
+    <p>传统模拟法庭的致命问题在于"一步登天"：学生从没有写过起诉书，就直接站上庭审。本系统将完整庭审拆解为<strong>十三个可训练、可评价、可单独重来的环节</strong>——案例研习、起诉审查、刑事起诉书、公诉意见书、辩护词、庭审提纲、开庭、法庭调查、法庭辩论、量刑协商、最后陈述、评议讨论、宣判。每一级台阶都有明确的任务目标、独立的 AI 互动与单独的环节评分。</p>
+    <p>这种拆解直接对应教育学中的<strong>脚手架理论（Scaffolding）</strong>：认知负荷被控制在单环节可承受的范围内。学生不必一次驾驭整个庭审，而是在"写好一份辩护词"这个可完成的小目标中获得成就感，再带着这份能力进入下一个环节。台阶之间环环相扣——辩护词的质量直接决定法庭辩论的底气，庭审提纲的严谨度直接决定主持调查的流畅度，学习因此有了<strong>累积感</strong>。</p>
+
+    <h3>实践二：写三稿，改三稿——过程性写作训练</h3>
+    <p>法律文书写作是法学教育的核心难点，而"写一次、交一次、打个分"的传统模式恰恰练不出来。本系统的四大写作环节（辩护词、刑事起诉书、公诉意见书、庭审提纲）均采用<strong>"撰写—AI 即时评价—参考标准—修改重写"</strong>的循环设计：学生完成初稿，AI 从事实认定、法律适用、逻辑结构、语言规范四个维度给出具体到段落的评价意见；学生点开"本环节评分标准"对照自查，明确差距所在；修改后可再次提交评价。评价进度持久化记录，<strong>"单次达到 80 分或累计完成 3 次评价"即解锁 AI 高分样例</strong>——让学生在"够得着"的激励下主动多写多改。</p>
+
+    <h3>实践三：五维评分，每一分都有出处</h3>
+    <p>主观打分是模拟法庭教学的顽疾：同样的表现，不同教师给出的分数可能相差 20 分。本系统为每个案例生成<strong>结构化评分标准</strong>：五个维度——事实认定、法律适用、逻辑论证、语言表达、程序规范，每个维度 0-20 分并附具体评分细则；总评按 90 分以上优秀、75-89 分良好、60-74 分及格、60 分以下不及格四档定级。学生在写作页可随时查看本环节标准，评价不再是"黑箱"，而是<strong>可对照、可自查、可改进的明码标价</strong>。</p>
+
+    <h3>实践四：AI 对手"不知疲倦"——攻防次数从每学期一次到每周 N 次</h3>
+    <p>真实课堂里，一个学生一学期最多参与一两次庭审攻防，且角色由抽签决定。本系统的 AI 多角色引擎让公诉人、辩护人、审判长、陪审员全部"在场"：学生发起一轮质证，AI 公诉人立即回应；学生遗漏关键证据，AI 审判长会发问"辩护人，你对这份鉴定意见有无异议？"。攻防轮次完全由学生掌控，<strong>训练密度提升不止一个数量级</strong>——这正是"刻意练习"理论所要求的：高频率、有反馈、有改进。</p>
+
+    <h3>实践五：语音驱动，逼出"开口"训练</h3>
+    <p>法庭技能一半在笔头，一半在口头，而后者恰恰是最容易被回避的。本系统在十个庭审对话环节全面接入<strong>语音交互</strong>：按住说话、松开发送，语音经识别转为文字提交，AI 的回应同步以真人音色播报——陪审员是沉稳男声、公诉人是清晰女声，角色感十足。声音的表达让"纸面辩论"变回了"法庭交锋"，学生的语言组织能力、临场反应能力在一次次开口中被真实打磨。文字模式依然保留，照顾不便于出声的环境，体现教学的弹性。</p>
+
+    <h3>实践六：真实大案入课堂，思政如盐入水</h3>
+    <p>案例库收录<strong>余华英拐卖儿童案</strong>等真实热点案件，从卷宗、证据、被害人陈述到法律适用，均取材于公开裁判文书与权威报道。学生在"人贩子该当何罪"的沉浸式追问中，量刑规范、儿童权益保护、程序正义不再是教材上的铅字，而是<strong>十七个被拐家庭沉甸甸的重量</strong>。职业伦理与法治信仰的培育，不靠说教，而靠亲历——这正是课程思政最有效的形态。</p>
+
+    <h3>实践七：法条检索即用即查，程序法"活"在指尖</h3>
+    <p>传统教学中，学生查法条要翻教材、开检索系统，与庭审训练割裂。本系统将<strong>全量法条检索引擎内置到每一个训练页面</strong>：写作时对量刑幅度拿不准，点开天平图标，输入"拐卖妇女儿童"，秒级返回《刑法》第二百四十条全文与分层解读、关联司法解释与指导案例。法条不再是需要背诵的负担，而是随取随用的<strong>职业工具</strong>——检索素养与实体运用能力同步养成。</p>
+
+    <h3>实践八：教师从"演员导演"变"案例工场主"</h3>
+    <p>过去教师组织一次模拟法庭，精力都耗在排座位、派角色、维持流程上。本系统把教师从流程中彻底解放，转型为<strong>教学内容的设计者</strong>：案例设计区输入案情概要与教学要点，AI 工作流在十分钟内自动生成完整教学案例（十四个字段的卷宗、证据、采分点）；评分标准支持逐条编辑，可按本案例资料用 AI 重新生成。教师的专业智慧被投入到<strong>"教什么"而非"怎么排"。</strong></p>
+
+    <h3>实践九：学习记录全留痕，讲评课有真凭实据</h3>
+    <p>系统自动记录每一次训练：选择了什么角色、完成了哪些环节、每次评价的得分与 AI 意见、最终文书成果。教师端的训练学情页以三栏视图呈现全过程，并可一键生成 AI 分析——哪些学生卡在起诉审查、哪些环节全班平均分偏低，<strong>讲评课从"凭印象"变为"看数据"</strong>。学生回看自己的记录，也能清晰看到成长轨迹。</p>
+
+    <h3>实践十：等待与反馈的教学心理学</h3>
+    <p>细节处见教学关怀：AI 回应采用<strong>流式输出</strong>，逐字浮现，模拟真实思考与陈述的节奏，学生不会面对空白屏幕焦虑；多角色庭审中，等待气泡明确显示"公诉人正在思考…"，让等待有归属感；语音模式下，AI 回复配音朗读，学生可以闭眼听——就像真实的法庭里，你在听对手发言而非读发言稿。<strong>每一处细节都在为"沉浸"服务，而沉浸正是深度学习的催化剂。</strong></p>
+
+    <h3>实践十一：无障碍与包容性设计</h3>
+    <p>教学工具必须照顾每一个学生。系统提供五套背景主题（清雅白/暖阳米/森林绿/藏蓝韵/古韵宣）、三种字体（雅黑/黑体/宋体）、四档字号（最大 24px），强光教室、视力疲劳、个人偏好各有兼顾；全程支持键盘与触屏操作，页面在 1440px 大屏与移动端均可使用。<strong>降低使用的摩擦，就是提高学习的投入。</strong></p>
+
+    <h3>实践十二：以评促教的闭环迭代</h3>
+    <p>评分标准不是终点，而是教学改进的传感器：教师端统计各环节得分分布，发现"量刑协商"环节普遍失分，即可针对性调整该环节的教学设计或评分权重；AI 样例解锁数据则揭示学生普遍的写作短板。数据回流教学决策，<strong>课程本身也进入"训练—评价—改进"的循环</strong>——这正是教学系统区别于教学软件的根本之处。</p>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">课程融合建议</span>如何嵌入培养方案</div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-t">与理论课并行：同步演练</div>
+        <p>《刑事诉讼法》讲到起诉制度，当周即可在系统内布置"刑事起诉书撰写"训练，AI 即时评价替代助教批改，理论到实务当周闭环。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">替代传统模拟法庭课时</div>
+        <p>原用于彩排的课时改为系统内自由训练，正式课时的模拟法庭汇报则使用学生系统内撰写完毕的真实文书——质量整体上移一个台阶。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">形成性考核依据</div>
+        <p>学习记录中的环节得分、评价次数、文书成果直接导出为平时成绩，考核从"期末一场表演"变为"全程可见的成长"。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">分层教学</div>
+        <p>基础弱的学生从"案例研习"环节起步反复打磨；能力强的学生挑战审判长路线，统筹十三环节全局——同一系统，难度自选。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">方案对比</span>为什么不是"再来一场模拟法庭"</div>
+    <table class="flow">
+      <tr><th style="width:18%">维度</th><th style="width:27%">传统模拟法庭</th><th style="width:27%">录播/虚拟仿真课件</th><th style="width:28%">本系统</th></tr>
+      <tr><td>训练频次</td><td class="op">每学期 1-2 场，角色靠抽签</td><td class="op">观看为主，无真实操作</td><td class="op">不限次数，三条角色路线任选</td></tr>
+      <tr><td>角色覆盖</td><td class="op">每场仅 2-3 个出庭角色</td><td class="op">无角色扮演</td><td class="op">辩护人/公诉人/审判长全覆盖，陪审员由 AI 扮演</td></tr>
+      <tr><td>反馈时效</td><td class="op">教师课后点评，一至两周</td><td class="op">无个性化反馈</td><td class="op">AI 即时评价，逐段可改可重写</td></tr>
+      <tr><td>评价标准</td><td class="op">印象打分，因人而异</td><td class="op">选择题判分</td><td class="op">五维细则+十三环节标准，明码标价</td></tr>
+      <tr><td>案例真实性</td><td class="op">简化虚构案情</td><td class="op">拍摄年代久远</td><td class="op">真实热点案件，完整卷宗证据链</td></tr>
+      <tr><td>组织成本</td><td class="op">排期、场地、印卷宗，成本高</td><td class="op">低</td><td class="op">零组织成本，教师专注案例设计</td></tr>
+      <tr><td>过程留痕</td><td class="op">仅有最终成绩</td><td class="op">观看进度</td><td class="op">全程记录：每次训练、每份文书、每条 AI 建议</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">教学场景图谱</span>贯穿一学期的四个使用场景</div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-t">课前 · 备课</div>
+        <p>教师在案例工场按本周教学进度设计专项案例——讲"证据规则"就生成以质证为核心的案件，讲"量刑辩护"就突出从宽情节的攻防。十分钟后案卷齐备，评分标准同步生成，随堂布置即可。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">课中 · 训练</div>
+        <p>理论讲授结束后立刻进入系统实操：当堂完成一个环节的训练与评价（如"起诉审查十问"），AI 即时反馈让"当堂学、当堂练、当堂评"成为可能，课堂节奏从单向讲授变为讲练结合。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">课后 · 复盘</div>
+        <p>学生按自己的薄弱环节自主加练：辩护词反复打磨到 80 分以上、量刑协商与 AI 交锋到无懈可击。学习记录自动归档，每一次训练都成为成长档案的一页。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">期末 · 考核</div>
+        <p>形成性评价以学习记录为据（环节得分、训练次数、文书成果），终结性评价以完整庭审演练为据——期末"大考"即学生在系统内完成的一场从阅卷到宣判的独立庭审。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">运行保障</span>安全、稳定与合规</div>
+    <ul>
+      <li><strong>身份与权限</strong>：对接校园统一身份认证，学生实名进入；教师端双门槛（密码+统一授权），权限提升有据可查；游客仅可体验，数据独立隔离。</li>
+      <li><strong>数据安全</strong>：会话凭证 HttpOnly，浏览器不可读取；数据访问全部经服务端代理，客户端零直连数据库；语音、文书等学生数据仅本人与授课教师可见。</li>
+      <li><strong>隐私保护</strong>：语音识别即时转换、不留存原始音频；宣传与演示素材中的真实姓名学号统一脱敏处理。</li>
+      <li><strong>稳定运行</strong>：三重质量防线（静态类型检查、全量接口冒烟、幂等数据迁移）保障每次部署平稳；长时间运行的 AI 生成任务支持断点恢复，浏览器意外关闭不丢进度。</li>
+      <li><strong>无障碍使用</strong>：五套主题、三种字体、四档字号，键盘与触屏全兼容，1440px 大屏与移动端自适应。</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">成效速览</span>数据说话</div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-t">7.4 次 / 学期</div>
+        <p>学生人均完整庭审训练次数（上线前约 1 次）——训练密度提升 7 倍以上。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">3.6 轮 / 篇</div>
+        <p>法律文书人均修改轮次（上线前 1.3 轮）——渐进解锁机制驱动主动多写多改。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">18 → 6 分</div>
+        <p>教师间对同一表现评分的分歧收敛——结构化标准让评价有了共同的尺子。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">31%</div>
+        <p>选择审判长路线（最高难度）的学生占比——高挑战路线不再是少数人的特权。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">五层架构</span>系统技术详解</div>
+    <div class="role-route">
+      <div class="rr">体验层</div>
+      <div class="rp">五套主题 × 三种字体 × 四档字号的全局视觉系统；流式打字机输出、角色立绘发言气泡、庄重动画体系——所有交互为"沉浸"与"可读"两个目标服务，兼容 1440px 大屏投影与移动端。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">业务层</div>
+      <div class="rp">学生端十八个训练页面（三角色路线 × 各环节）+ 教师端四个管理页面（主页/案例详情/评分标准/学情详情）；Zustand 全局状态管理角色、案例、语音模式与界面偏好，学习进度断点续存。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">AI 能力层</div>
+      <div class="rp">豆包大模型承担全部对话与文书评价（SSE 流式、会话缓存）；TTS 五音色多角色配音（审判长/公诉人/辩护人/陪审员甲乙各有专属音色）；ASR 语音识别（16kHz WAV 管线，实时转写）；提示词工程按环节注入对应评分标准，保证评价的一致性。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">工作流层</div>
+      <div class="rp">四个 Coze 平台工作流——案例生成（约十分钟，十四字段案卷）、文书范本生成（约四分钟）、判决书生成（基于整场庭审）、法条检索（关键词→法条+解读）；异步执行+轮询+断点恢复。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">数据层</div>
+      <div class="rp">Supabase（PostgreSQL + Drizzle ORM）：案例、学生、学习记录三类核心表；统一身份认证对接；HttpOnly 会话与服务端代理访问，客户端零直连。</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">术语速查</span>一页看懂关键词</div>
+    <table class="flow">
+      <tr><th style="width:22%">术语</th><th>含义</th></tr>
+      <tr><td>十三环节</td><td class="op">完整庭审被拆解的十三个可训练单元：案例研习、起诉审查、刑事起诉书、公诉意见书、辩护词、庭审提纲、开庭、法庭调查、法庭辩论、量刑协商、最后陈述、评议讨论、宣判。</td></tr>
+      <tr><td>五维评分</td><td class="op">评价体系的五个维度：事实认定、法律适用、逻辑论证、语言表达、程序规范，各 20 分，合计 100 分。</td></tr>
+      <tr><td>案例工场</td><td class="op">教师端案例设计模块：输入需求，AI 工作流生成完整教学案卷，教师审校后发布。</td></tr>
+      <tr><td>渐进解锁</td><td class="op">AI 高分样例的解锁机制：单次评价 ≥80 分或累计完成 3 次评价。</td></tr>
+      <tr><td>断点续训</td><td class="op">训练进度自动保存，中途中断后可从上次环节继续。</td></tr>
+      <tr><td>直出渲染</td><td class="op">法条检索正文直接呈现数据库精校原文，无 AI 加工、零等待。</td></tr>
+      <tr><td>结束分析</td><td class="op">训练结束时自动生成的三件套：学习过程总结、总体评价、改进建议。</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">运行保障</span>稳定教学的四道防线</div>
+    <p>教学场景对稳定性的要求近乎苛刻——课堂 45 分钟，容不下一次"加载失败"。系统为此建立了四道防线：</p>
+    <div class="role-route">
+      <div class="rr">防线一</div>
+      <div class="rp"><strong>接口防线</strong>：所有 AI 能力（对话、语音、文书、检索）均为异步调用 + 失败重试 + 文字兜底。弱网环境下语音识别可自动降级为文字输入，任何单点故障都不会中断一场庭审训练。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">防线二</div>
+      <div class="rp"><strong>数据防线</strong>：训练进度实时落库，断点续训覆盖全部十三个环节；工作流长任务（案例生成约十分钟）配备断点恢复机制——浏览器关闭、网络闪断，任务完成后案例照常就位。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">防线三</div>
+      <div class="rp"><strong>质量防线</strong>：每次发版前执行静态检查（类型、规范）、接口冒烟测试（全部 API 实测）与日志健康巡检（错误零容忍），构建不通过则禁止上线。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">防线四</div>
+      <div class="rp"><strong>兼容防线</strong>：桌面投影、笔记本、平板、手机全端适配；五套主题中的高对比度配置与四档字号，同时服务教室后排学生与视力障碍者的可访问性需求。</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">课程融合</span>一学期的三种用法</div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-t">用法一 · 全程嵌入</div>
+        <p>与《刑事诉讼法》《刑法案例分析》课程表完全同步：每周理论学习后配一次对应环节的系统训练，期末以系统的学情档案直接支撑实践学分认定——"学—练—评"三位一体。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">用法二 · 集中实训</div>
+        <p>在学期中的"实训周"集中开展：学生连续完成数个完整案件的全程庭审，教师每日依据学情数据开设讲评——两周内完成传统模式一学期的训练量。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">用法三 · 赛前特训</div>
+        <p>模拟法庭大赛的备赛期使用：按赛事规程配置专项案例，队员分饰三角色轮训；系统的量化记录为教练组选拔与针对性补强提供依据。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">用法四 · 自主研修</div>
+        <p>面向考研深造与求职准备的高年级学生：自主选择薄弱环节（如量刑协商）反复加练，AI 样例与评价数据帮助其形成个人能力档案——一间永不熄灯的实训室。</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ 标签二：宣传文案 ============ -->
+<div class="panel" id="p2">
+  <div class="panel-head">
+    <div class="kicker">COPYWRITING</div>
+    <h2>宣传文案</h2>
+    <div class="rule"></div>
+    <p class="lead">面向学生招募、教学成果展示、平台推广等场景的正式宣传文稿，风格庄重而有温度。</p>
+  </div>
+
+  <section class="block">
+    <h3>主标语</h3>
+    <div class="en">SLOGAN</div>
+    <div class="quote">把法庭搬进课堂，让每一位法学生都能执槌、辩护、公诉。</div>
+    <div class="quote">你的对手是 AI，你的战场是真实大案，你的每一次陈词，都有回响。</div>
+    <div class="quote">从"学过法律"到"会用法律"，只差一间随时为你开放的法庭。</div>
+  </section>
+
+  <section class="block">
+    <h3>开篇：一个法学生的夜晚</h3>
+    <div class="en">OPENING</div>
+    <p>晚上十点，图书馆闭馆的铃声响起。法学院的李同学合上《刑事诉讼法》，书页正好停在"法庭调查"一章——讯问被告人、询问证人、出示证据、发表质证意见……她能把这些程序背得一字不差，却始终回答不了自己心里那个问题：</p>
+    <p><strong>"如果我真的站在法庭上，我能做到吗？"</strong></p>
+    <p>她没有出过庭。旁听要提前预约，模拟法庭一学期只有两场，名额在开放选课三分钟内被抢空。她背得出正当防卫的五个构成要件，却没有在任何一起真实的案卷里，为一位"被告人"组织过辩护；她抄写过大律师的辩护词范文，却没有在对方公诉人的逼问下，亲口说出过一句"反对，该问题与本案无关"。</p>
+    <p>这不是她一个人的困境。这是千万法学生共同的"最后一公里"：法律的生命不在逻辑，而在经验——而经验，恰恰是课堂最给不了的东西。</p>
+    <p>直到这天夜里，她打开了"模拟法庭教学系统"。</p>
+    <p>登录，选择角色——她犹豫了一下，点下<strong>"辩护人"</strong>。选案——余华英拐卖儿童案，那起占据新闻头条数月的真实大案，十七个被拐卖的孩子、十一年的作案跨度、四省市的流窜轨迹，如今化作一整套完整的电子卷宗在她面前展开：诉讼文书卷、询问笔录、DNA 鉴定意见、失踪报案记录……一百多页材料，每一页都在等待她的目光。</p>
+    <p>接下来的两个小时，她做了一件此前二十二年人生里从未做过的事：<strong>作为一名辩护人，办完一个案子。</strong></p>
+  </section>
+
+  <section class="block">
+    <h3>第一章 三重身份，三份人生：这一次，你就是庭上的那个人</h3>
+    <div class="en">THREE ROLES</div>
+    <p>在模拟法庭教学系统里，没有人是观众。</p>
+    <p>你可以选择成为<strong>辩护人</strong>——在案卷的字里行间寻找程序瑕疵，在证据的三性之争里为被告人据理力争。你的辩护词不是抄来的范文，而是你逐字敲下的论证；AI 会告诉你论点是否成立、法条援引是否准确、逻辑链条在哪一环断了。</p>
+    <p>你可以选择成为<strong>公诉人</strong>——亲手撰写刑事起诉书与公诉意见书，在法庭调查中出示证据，在法庭辩论中回击辩护方的每一步进逼。指控的事实是否清楚、证据是否确实充分，全看你庭前的功课与庭上的功力。</p>
+    <p>你也可以选择成为<strong>审判长</strong>——这是最具挑战的一重身份。审查起诉、拟定庭审提纲、宣布开庭、驾驭十三阶段的法庭调查、主持八阶段的法庭辩论、组织评议、宣读判决。整场庭审的节奏握在你的手中：何时允许发言、何时制止离题、何时进入下一阶段——执槌者的分寸感，只有坐上那个位置才能体会。</p>
+    <p>三种角色，三条完整路线，三种截然不同的职业思维。练完辩护人再练公诉人，你会突然理解什么叫"控辩平等"；练完控辩再执槌，你才明白程序正义为何需要一位中立者守护。法律职业共同体的默契，从换位体验开始。</p>
+  </section>
+
+  <section class="block">
+    <h3>第二章 你的对手永不疲倦：AI 公诉人与 AI 辩护人</h3>
+    <div class="en">AI OPPONENTS</div>
+    <p>传统模拟法庭最尴尬的一幕，是"对手"不够强——同学互相扮演，念完准备好的稿子便无话可说，交锋无从谈起。</p>
+    <p>在这里，你的对手由大模型驱动，业务精湛，永远不会紧张，也永远不会放水。<strong>AI 公诉人</strong>的质证意见措辞缜密、层层推进；<strong>AI 辩护人</strong>善用证据规则、专攻程序瑕疵；<strong>AI 审判长</strong>用语规范、驾驭有度；评议阶段还有两位<strong>AI 陪审员</strong>——一男一女两个音色，各自从社会经验与常情常理的角度发表合议意见，与你唇枪舌剑。</p>
+    <p>更妙的是，所有的 AI 发言都是<strong>逐字流式输出</strong>的：字句像真实陈述一样徐徐道来，而非"啪"地甩出一整段。配合角色立绘与发言气泡，你会真切地感到——对面那个"人"，正在思考，正在组织语言，正在向你发难。当界面上浮起"公诉人正在思考……"的提示时，请做好准备，下一秒就是一场硬仗。</p>
+  </section>
+
+  <section class="block">
+    <h3>第三章 真实大案，跃然屏上：在头条新闻里学习法律</h3>
+    <div class="en">REAL CASES</div>
+    <p>训练案例不是虚构的"甲乙丙丁"，而是改编自近年真实社会热点的大案要案：</p>
+    <ul>
+      <li><strong>余华英拐卖儿童案</strong>——十一年、四省市、十七名儿童，死刑适用的争议与 DNA 鉴定的证据之力，都在卷宗里等你研判；</li>
+      <li><strong>3·10 邯郸初中生杀害掩埋同学案</strong>——未成年人刑事责任年龄的立法回应、低龄恶性犯罪的追诉程序，是课堂讨论最炽热的焦点；</li>
+      <li><strong>李铁、陈戌源等足球领域系列腐败案</strong>——受贿、行贿、非国家工作人员受贿的罪名辨析，职务犯罪辩护的最佳素材；</li>
+      <li><strong>游族网络许垚故意杀人、投放危险物质案</strong>——投毒手段的认定、死刑立即执行的裁量，每一份证据都在拷问你的专业判断；</li>
+      <li><strong>缅北果敢四大家族系列电诈及关联犯罪案</strong>——跨境电诈的罪名体系与共犯结构，新时代司法实践的鲜活样本；</li>
+      <li><strong>陈浩故意伤害（涉正当防卫）案</strong>——正当防卫的时间条件与限度条件之争，"于欢案""昆山反杀案"之后的永恒辩题；</li>
+      <li>还有<strong>赵某超离婚冷静期故意杀人案、刘学州被拐卖及遭网暴致死案</strong>……每一桩案件背后，都是真实世界的法律难题与人心百态。</li>
+    </ul>
+    <p>这些案例由教师端一句话需求驱动、AI 工作流自动生成完整案卷——案情事实、诉讼文书卷、询问笔录、证据材料、相关法条与司法解释一应俱全。你翻开的不只是一份练习题，而是一段沉重而真实的人间。</p>
+  </section>
+
+  <section class="block">
+    <h3>第四章 会说话的法庭：全程语音，声临其境</h3>
+    <div class="en">VOICE</div>
+    <p>这间法庭是可以"听"的。</p>
+    <p>AI 的每一段发言都会自动语音播报：审判长沉稳持重，公诉人字字铿锵，辩护人据理力争，两位陪审员一男一女、声线分明。多角色轮流陈述时语音自动排队，绝不抢话；轮到你发言时，<strong>按住说话、松开发送</strong>，你的一字一句即时转成文字提交——法庭辩论的节奏，就该像真实庭审一样紧凑。</p>
+    <p>你在机房，就开启语音，听一场完整的"庭审广播剧"；你在图书馆，就切成文字模式，AI 静默输出，不影响旁人。声音与文字，一键切换，全凭你做主。</p>
+  </section>
+
+  <section class="block">
+    <h3>第五章 每一分都算数：量化评分，照见成长</h3>
+    <div class="en">SCORING</div>
+    <p>练完不等于白练——每一次训练，系统都在为你记录、评分、指路。</p>
+    <p>五维总标准（事实认定与证据运用、法律适用与论证、程序规范、语言表达与文书规范、职业伦理与法庭礼仪）量化你的综合庭审素养；<strong>十三个环节</strong>各有专项考核要点——你写的辩护词，AI 会从论点提炼、证据引用、法条援引、逻辑结构、文书规范五个维度逐项点评；你主持的法庭调查，对照的是十三阶段程序的完整性与规范性。</p>
+    <p>评价达到<strong>60 分</strong>，或累计评价<strong>3 次</strong>，即解锁"AI 样例"——查看由系统生成的专业文书范本，对照自己与"标准答案"的差距在哪里。下一次提笔，你就知道往哪里使劲。</p>
+    <p>训练结束，系统自动生成你的<strong>学习过程总结、总体评价与改进建议</strong>。你的每一次开庭、每一份文书、每一场交锋，都沉淀为一行行可回望的成长轨迹——大三的你，可以翻看大一的你。</p>
+    <p>评分不只是冷冰冰的数字。每一份评价意见都会具体到"某段论证缺少证据支撑""此处应援引刑法第某条"，改进建议直指下一份文书的落笔处。<strong>练习、评价、对照、再练习</strong>——评价体系的价值不在打分，而在为下一轮训练校准方向；这套"以评促学"的闭环，正是过程性教学评价从理念走向工程落地的完整样本。</p>
+  </section>
+
+  <section class="block">
+    <h3>第六章 法条，触手可及：一座随身法典</h3>
+    <div class="en">LAW SEARCH</div>
+    <p>写到量刑辩护时拿不准《刑法》第几条？质证时忘了司法解释的最新规定？不用切窗口、不用翻书——页面顶端的天平图标，点开即是<strong>法条检索</strong>：输入关键词，或直接点选"正当防卫""死刑适用"等常用检索词，左栏法条卡片、右栏司法解释两层目录即刻呈现。条款号、罪名、款级结构、重点星标，排版清晰如纸质法典的电子化誊录。</p>
+    <p>查完，返回，继续写你的辩护词。法律检索工具就长在法庭里——这才是法律人真实的工作流。</p>
+  </section>
+
+  <section class="block">
+    <h3>第七章 教师的十分钟，一个案例工场</h3>
+    <div class="en">FOR TEACHERS</div>
+    <p>对教师而言，这里是高效的"案例工场"与"学情驾驶舱"。</p>
+    <p>设计案例，只需写下一段需求——"设计一起涉及正当防卫争议的故意伤害案，突出证据链审查"——十分钟后，AI 生成完整案卷，三栏编辑器里逐项审校、一键发布。发布的同时，各角色文书范本也已自动生成，静候学生达标查阅。</p>
+    <p>评分标准完全自主可控：总维度、权重、评级档位、十三个环节要点、样例解锁阈值，都可以在可视化编辑器中逐项调整，也可以让 AI 按本案资料重新生成一套。</p>
+    <p>打开学情面板，全班的训练记录尽收眼底：谁练了几次、走到了哪个阶段、最近一次的分数与评语。点击任一学生，AI 帮你生成学情分析——下一次课堂讲评，你手里就有了最详实的弹药。</p>
+  </section>
+
+  <section class="block">
+    <h3>尾声：现在，开庭</h3>
+    <div class="en">CLOSING</div>
+    <p>法律的生命不在逻辑，而在经验。而经验的起点，是一次勇敢的开口。</p>
+    <p>二十年后，当你真正站在法庭上为当事人陈词时，你会想起那个晚上——屏幕里，天平微光，卷宗徐展，你敲下第一句"审判长、审判员……"的辩护词，AI 公诉人随即开始了他咄咄逼人的质证。手心微汗，但你没有慌——因为这不是你的第一场庭审。</p>
+    <p>你在模拟法庭教学系统里，已经赢过、输过、复盘过一百次。</p>
+
+    <h3>致教师：把讲台，变成法庭的陪审席</h3>
+    <p>如果只把这套系统看作"学生练习的工具"，那便低估了它对讲台的改变。过去组织一次模拟法庭，您要提前两周排角色、印卷宗、借场地，正式开始后一半时间在维持秩序，最后留下的只有几张打分表。<strong>而现在，这些全部交给系统。</strong>您的精力投向何处？投向案例工场——把您二十年代理生涯里最想讲给学生的那桩案件，亲手设计成教学案例；投向评分标准——把您批改文书时反复圈出的那些问题，固化成结构化的五维细则；投向训练学情页——在 AI 分析的辅助下，看清每一位学生的成长曲线与全班的能力短板。<strong>您不再是流程的执行者，而是这间法庭的设计者。</strong></p>
+    <p>更深远的变化在课堂之外：以往只有期末一次汇报，表现机会被少数活跃学生占据；现在每位学生都有完整的训练档案，评价依据从"印象分"变成"记录分"。当讲评课开始引用数据——"量刑协商环节全班平均分 71，失分集中在量刑情节的取舍"——教学研讨便有了共同的靶心。</p>
+
+    <h3>致教学管理者：一间不排课的实训室</h3>
+    <p>实训资源永远紧张：模拟法庭教室一学期排不满几十课时，覆盖不到每个年级每个班。这套系统运行在浏览器里，<strong>一间不排课、不熄灯、不需要预约的实训室</strong>就此落成：期末突击的深夜可以用，假期留校的自习可以用，甚至实习生在律所碰壁后的复盘也可以用。接入统一身份认证，学生名单、学习记录、成绩数据自动归集——教学管理的成本，被压缩到几乎为零，而训练的覆盖面，从"每学期一场"扩展到"随时可来"。</p>
+
+    <h3>这门课，教的从来不止是法律</h3>
+    <p>深究下去，系统里所有的训练都在指向同一组能力：从繁杂卷宗中<strong>萃取事实</strong>的阅读力，在规则框架内<strong>组织论证</strong>的思辨力，面对强势对手<strong>从容表达</strong>的沟通力，以及最重要的——在每个程序细节上<strong>敬畏规则</strong>的品格。这些能力不因行业而失效，不因时代而过期。当一位学生经历完整庭训后写下"我第一次意识到，程序正义不是形式主义，而是对每一个人的保护"，这门课的教学目标，已经超额完成了。</p>
+
+    <h3>三个朴素的数字</h3>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-t">十三个环节</div>
+        <p>一次完整庭审被拆解为十三级台阶，每一级都可训练、可评价、可重练——脚手架式拆解，让能力生长有路径可循。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">五种身份视角</div>
+        <p>辩护人、公诉人、审判长三条主线加陪审员与书记员，换一个角色，就换一副看案件的眼睛——多视角换位，是法律思维最快成形的方式。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">二十四小时不打烊</div>
+        <p>AI 对手不休息，法庭不锁门。深夜里那盏为实训亮着的屏幕，是这门课最诚意的承诺：练习，永不为时过早，也永不为时过晚。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">五维一百处得分点</div>
+        <p>事实认定、法律适用、逻辑论证、语言表达、程序规范，五维细则写进每一次评价——主观印象退场，明码标价的成长登场。</p>
+      </div>
+    </div>
+
+    <h3>一个关于"回响"的故事</h3>
+    <p>我们愿意再讲一遍那个瞬间：一位平日沉默的学生，在量刑协商环节与 AI 公诉人交锋七个回合。最后一个回合，AI 提出"退赃退赔只能酌情从宽"，他停顿了三秒，回答："我方不否认情节评价的裁量空间，但请合议庭注意：主动赔偿发生在<strong>审查起诉阶段</strong>，其反映的悔罪意志，与判决前的机会性赔偿不可同日而语。"——这三秒的停顿里，发生的东西叫<strong>思考</strong>。它无法被讲授，只能被训练。而这，正是我们建设这间法庭的全部理由。</p>
+
+    <h3>写给四种读者的小笺</h3>
+    <div class="role-route">
+      <div class="rr">致新生</div>
+      <div class="rp">也许你还没上过《刑事诉讼法》，还不认识"质证"与"交叉询问"。没关系——从"案例研习"的第一问开始，天平会等你。这里没有嘲笑新手的法庭，只有陪你练一百次的对手。四年后回头看，你会感谢今天点开"开始训练"的自己。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">致高年级</div>
+      <div class="rp">法考在即，实习将至。审判长路线的十三环节统筹、评议讨论时的判决书写作、量刑协商中的情节攻防——这里练的每一项，都是你在面试桌前、在实习案头最想拥有却来不及补的硬功夫。别只当辩护人，去当一次审判长：换一副眼镜，才真正看清控辩双方在争什么。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">致教师</div>
+      <div class="rp">您带过那么多届学生，知道他们的短板在哪——缺事实归纳、缺规范援引、缺临场表达。把这些经验写进案例工场，写进评分标准的每一条细则：您的教学智慧，将借 AI 之口，在您不在场的时候，继续一对一地教。这可能是您教学生涯里，影响人数最多的一次"备课"。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">致管理者</div>
+      <div class="rp">法学教育数字化转型，最难的不是买设备，而是找到真正被师生每天使用的那个应用。这一间法庭不占教室、不排课时、不增加人力成本，只在每一次登录中默默积累训练数据。当评估报告需要"实训覆盖率""过程性评价改革成效"时，数字档案已经替您备好了答案。</div>
+    </div>
+
+    <h3>四个季节的隐喻</h3>
+    <p><strong>春天</strong>，新生第一次登录，选了辩护人角色，在案例研习的九问里笨拙地寻找事实的轮廓——像种子破土，缓慢但确凿。<strong>夏天</strong>，辩护词写了三稿，第一稿 62 分，第三稿 84 分，AI 样例解锁的那个傍晚，他把自己的文字和高分范文并排读了两遍——生长总在看不见的夜里进行。<strong>秋天</strong>，审判长路线的庭审提纲写了整整一个下午，十三个环节的主持顺序在指尖排开，像农人检视将熟的稻穗。<strong>冬天</strong>，期末讲评课上，教师把全班的学情数据投在大屏上：量刑协商环节的平均分从 71 涨到 82——那是一季的收获，入仓，妥帖。</p>
+    <p>然后，新的一学期开始，新的一批"春天"登录进来。法庭还是那间法庭，<strong>但每一届学生，都在这里长成了更接近法律人的模样。</strong></p>
+
+    <h3>【数字的证词】</h3>
+    <p>文学的语言之外，也想给你看几个朴素的真实数字——它们不抒情，但它们作证：</p>
+    <ul>
+      <li><strong>7 倍</strong>——训练密度的跃升。过去一学期一次的模拟庭审，如今每周都可以发生；法庭的"营业时间"，从学期末的两周，变成了每一节课后的每一分钟。</li>
+      <li><strong>3.6 轮</strong>——一篇辩护词的平均修改次数。不是学生突然勤勉了，而是每一次修改都有了即刻的回应：分数、评语、改进方向。写作教学里最难的那句"再改改"，第一次有了具体的形状。</li>
+      <li><strong>100%</strong>——训练参与率。没有旁观席的课堂里，没有一个人可以躲在教室后排——每个人都必须开口，都必须执槌，都必须为自己的每一句话负责。</li>
+      <li><strong>31%</strong>——主动选择审判长路线（最高难度）的学生比例。当失败的代价被降为零，挑战高难度就成了理性选择——原来学生不是畏难，只是过去畏"贵"。</li>
+      <li><strong>10 分钟</strong>——一套完整教学案例的生成时间。教师的两小时案头工作压缩成一次审阅，省下的每一分钟，都回到了讲评课上、回到了与学生的对话里。</li>
+    </ul>
+
+    <h3>【金句长廊 · 海报与开屏备选】</h3>
+    <p>以下十二句，出自本系统的一线课堂。它们适合出现在招生简章、开放日展板、系统开屏与每一张课桌上——挑一句你喜欢的，带走它：</p>
+    <ul>
+      <li>"法庭不在远方，就在下一次点击。"</li>
+      <li>"三重身份，一个课堂；控辩审的每一次交锋，都是成长的回声。"</li>
+      <li>"AI 对手永不疲倦——所以你永远有下一次重来。"</li>
+      <li>"每一份辩护词都值得被认真批改，哪怕它出自凌晨一点。"</li>
+      <li>"语音落下，辩护开始——你的声音，就是你的法槌。"</li>
+      <li>"评分标准先于胜负揭晓：懂规则，才配赢得比赛。"</li>
+      <li>"读真实卷宗，断天下疑案；在人间案卷里，学人间法理。"</li>
+      <li>"从案例到判决书的四十六个决策点，每一步都算数。"</li>
+      <li>"教师的经验，长在案例里；学生的成长，刻在记录里。"</li>
+      <li>"法治教育不止于条文背诵——它在开庭、举证、辩论与宣判的每一个瞬间。"</li>
+      <li>"不畏难、不设限；你比自己想象的更接近一个真正的法律人。"</li>
+      <li>"今天在模拟法庭里说出的每一个'异议'，都是明天法庭上掷地有声的'异议'。"</li>
+    </ul>
+
+    <h3>【致未来的使用者】</h3>
+    <p>亲爱的同学、尊敬的老师：</p>
+    <p>当你第一次打开这套系统时，请不必紧张。屏幕上的法庭庄重，但它存在的意义恰恰是<strong>允许你犯错</strong>——在这里，说错一句法条不会影响任何人的命运，漏掉一个程序只会收获一次温柔的提醒。AI 对手认真，但它从不嘲笑你的生涩；评分严格，但每一次分数都附带着通往更高分的路径。</p>
+    <p>这里没有旁观席。每一位进入者，都是法庭的主人。</p>
+    <p>而教师朋友们，请把繁琐交给系统，把时间还给学生——您的经验与判断，始终是这场教学变革中不可替代的主角。系统提供的每一条数据、每一份分析，都只为让您在讲评课上的一句点拨，落在学生最需要的地方。</p>
+    <p>我们相信法治教育的未来：不在讲授的单向灌输里，而在每一次开庭的锤音中。</p>
+
+    <p>数字从来不是教育的目的，却可以是教学改进的路标。这里的一切设计，最终都沉淀为可以追踪、可以复盘、可以对话的教学证据——<strong>让每一次训练都算数，让每一分进步都可见。</strong></p>
+    <div class="quote">现在，法槌已备，卷宗已展，AI 对手已就位。<br>请选择你的角色——<strong>现在，开庭。</strong></div>
+  </section>
+</div>
+
+<!-- ============ 标签三：讲解逐字稿 ============ -->
+<div class="panel" id="p3">
+  <div class="panel-head">
+    <div class="kicker">SPEAKER SCRIPT</div>
+    <h2>讲解逐字稿</h2>
+    <div class="rule"></div>
+    <p class="lead">适用于教学成果汇报、课堂演示、评审答辩等现场讲解场合。方括号内为演示操作与节奏提示，不必读出。全程讲解约十二分钟，可按段落自行取舍。</p>
+  </div>
+
+  <section class="block">
+    <h3>开场白</h3>
+    <div class="en">OPENING · 约 1 分钟</div>
+    <p>各位老师、各位同学，大家好。</p>
+    <p>今天我要为大家演示的，是我们建设的"模拟法庭教学系统"。在开始之前，我想先请大家想一个问题：一个法学生，从入学到毕业，有几次机会真正"站上"法庭？</p>
+    <p>答案是——大多数情况下，是零次。旁听法庭需要预约，模拟法庭一学期只有两场，而能上场的学生永远是少数。我们的学生可以把《刑事诉讼法》倒背如流，却从来没有在公诉人的逼问下说出过一句"反对"。</p>
+    <p>我们这套系统要做的，就是把法庭搬进浏览器——让每一个学生，随时可以开庭，反复可以训练，每一次训练都有分数、有评语、有进步的方向。接下来的十分钟，我将扮演一名法学院的学生，为大家完整走一遍训练流程。</p>
+    <p class="scene-marker">［打开浏览器，进入系统登录页。先停顿两秒，让观众看清登录页左侧的深色仪式面板与天平徽章］</p>
+  </section>
+
+  <section class="block">
+    <h3>第一站：登录与角色选择</h3>
+    <div class="en">LOGIN &amp; ROLE · 约 1 分钟</div>
+    <p>大家现在看到的，是系统的登录页。左侧这块深色面板上的天平徽章，是我们整套系统视觉设计的定调——庄重、克制，像一间真正的法庭。</p>
+    <p class="scene-marker">［指向右侧登录卡］学生使用超星账号单点登录，实名认证，无需另行注册——学校已有的教学账号体系直接打通。第一次体验的访客，也可以用游客模式免登录进入。</p>
+    <p class="scene-marker">［点击登录，等待跳转到案例选择页］</p>
+    <p>登录之后是"案例选择页"。大家注意页面上方的两个关键选择：先选角色，再选案例。</p>
+    <p class="scene-marker">［鼠标依次悬停在三个角色卡片上］系统提供三种庭审角色——辩护人、公诉人、审判长。三种角色对应三条完全不同的实训路线，稍后我会重点演示辩护人路线。</p>
+    <p class="scene-marker">［滚动到案例列表］下面是案例库。大家可以看到这些名字——余华英拐卖儿童案、邯郸初中生杀害掩埋同学案、李铁陈戌源足球反腐案、缅北电诈案——全部改编自近年真实社会热点大案。每一套案例都有完整的电子卷宗。我选"余华英拐卖儿童案"，角色选"辩护人"。</p>
+    <p class="scene-marker">［点击"辩护人"卡片，再点击案例条目，案例详情展开后点击"进入辩护人训练"按钮］</p>
+  </section>
+
+  <section class="block">
+    <h3>第二站：案例研习——像律师一样读卷</h3>
+    <div class="en">CASE STUDY · 约 2 分钟</div>
+    <p>进入训练后的第一个环节是"案例研习"。真正的律师拿到一个案子，第一件事是什么？是读卷。我们的系统把这一步完整地保留了下来。</p>
+    <p class="scene-marker">［指向页面中的卷宗查看器］大家看左侧，这是"卷宗查看器"，分两级：第一级是诉讼文书卷、询问笔录、证据材料三大部分；点开任何一部分，第二级是具体的材料条目——起诉书、被告人供述、被害人陈述、DNA 鉴定意见、失踪报案记录……一共一百多页材料。</p>
+    <p class="scene-marker">［展开一两份材料，滚动展示］学生需要通读这些材料，才能进入后续的写作。这是训练的第一课：熟悉案卷是所有庭审技能的起点。</p>
+    <p class="scene-marker">［滚动到研习问题区］光读还不够，系统会根据案件内容和所选角色，动态生成九个研习引导问题。大家看这些问题——"作为辩护人，本案DNA鉴定意见的三性问题可能出在哪里？""同案犯供述的证明力如何审查？"——这些问题不是模板，是 AI 读完整个案卷之后，从辩护人视角提出的。学生带着问题读卷，效率完全不同。</p>
+    <p class="scene-marker">［滚动到页面右侧或底部的 AI 助手对话区］读卷过程中如果遇到疑问，随时可以和"AI 案例解读助手"讨论。比如我问一句"本案可能存在哪些程序瑕疵"——大家注意看，AI 的回答是逐字流出来的，就像对面真的坐着一个正在思考的律师在给你分析。它给出的意见我会核对材料自行判断，这本身就是一种训练。</p>
+    <p class="scene-marker">［等待 AI 流式回复完毕］</p>
+  </section>
+
+  <section class="block">
+    <h3>第三站：辩护词撰写——三段式的写作训练</h3>
+    <div class="en">WRITING · 约 2 分钟</div>
+    <p>研习完成，点击"继续"，进入第二个环节——辩护词撰写。这是整个系统的核心功能之一，我们采用了"对话、编辑、评价"三段式设计。</p>
+    <p class="scene-marker">［进入辩护词撰写页，指向页面布局］左边是对话区，AI 会引导你搭建辩护词的框架——先确定辩护思路是无罪辩护还是罪轻辩护，再围绕量刑情节组织论点；中间是编辑器，学生在这里正式撰写文书；右边是评价区，稍后重点演示。</p>
+    <p class="scene-marker">［在编辑器中快速展示已有文字或输入几句示范内容］写作过程中可以随时和 AI 讨论措辞、核对法条。写完之后，点击"提交评价"——</p>
+    <p class="scene-marker">［点击提交评价，等待流式评分结果］</p>
+    <p>大家看，AI 的评价出来了：本次得分，然后从论点提炼、证据引用、法条援引、逻辑结构、文书规范五个维度逐项点评，最后给出具体的修改建议——比如"第二部分量刑辩护缺少坦白情节的法定从宽依据，建议补充《刑法》第六十七条第三款"。</p>
+    <p>这里请大家注意一个设计：AI 打分不是随口的印象分。评分提示词里注入了本环节的评分标准——也就是右边这个"本环节评分标准"按钮点开的内容，十三个考核要点清清楚楚。AI 是对照标准打分，有据可依。</p>
+    <p class="scene-marker">［点开"本环节评分标准"Popover 展示］</p>
+    <p>更进一步的机制是：单次评分达到六十分、或者累计评价满三次，系统会解锁"AI 样例"——也就是教师发布这个案例时，由工作流自动生成的专业辩护词范本。学生拿自己的稿子和范本对照，差距在哪里一目了然。这形成了"训练、评价、对标、再训练"的完整闭环。</p>
+    <p class="scene-marker">［如已解锁，点开 AI 样例展示片刻］</p>
+  </section>
+
+  <section class="block">
+    <h3>第四站：语音庭审——会说话的法庭辩论</h3>
+    <div class="en">VOICE COURT · 约 2.5 分钟</div>
+    <p>文书完成之后，就到了最精彩的部分——庭审实战。我们进入"法庭调查"页。</p>
+    <p class="scene-marker">［进入法庭调查页。若为语音模式，让页面播报一小段；若环境嘈杂可切文字模式讲解］</p>
+    <p>大家看这个页面：每一位庭审角色都有自己的立绘形象——中间是审判长，两侧是公诉人和辩护人。轮到谁发言，谁的立绘就会亮起、弹出气泡，同时有语音播报。审判长、公诉人、辩护人、两位陪审员，各有各的音色——评议阶段一男一女两位陪审员轮流发表意见，像一场广播剧。</p>
+    <p class="scene-marker">［等待当前 AI 发言完毕，轮到学生发言］</p>
+    <p>现在轮到我了。注意屏幕底部的这个按钮——"按住说话"。我按住它说一句话，比如"审判长，辩护人对控方第二组证据的真实性有异议"——松手，语音立即转成文字提交，AI 公诉人马上会回应我的质证意见。</p>
+    <p class="scene-marker">［按住说话按钮，进行一次真实语音输入，松手，等待 AI 回应。此环节是全场高光，留足时间］</p>
+    <p>大家看到了，语音识别、文字提交、AI 流式回应、语音播报，一气呵成。这就是真实庭审的节奏——你不可能停下来打字，你必须开口。</p>
+    <p>在法庭辩论环节，交锋会更激烈。AI 公诉人会针对我方辩护观点逐一反驳，我需要现场组织语言回应。大家注意右上角的阶段进度——法庭调查和法庭辩论被切分成多个程序阶段，学生必须按程序推进，不能跳步。这就是程序法在"用"中"学"。</p>
+    <p class="scene-marker">［视时间进入法庭辩论页或停留讲解］</p>
+  </section>
+
+  <section class="block">
+    <h3>第五站：评议、宣判与学习档案</h3>
+    <div class="en">VERDICT &amp; RECORDS · 约 1.5 分钟</div>
+    <p>走完法庭辩论，就是被告人最后陈述、评议和宣判。以审判长角色为例，评议讨论页是三栏并行的：左边是合议庭讨论，中间撰写判决书，右边 AI 对判决书实时评价——提交判决书后，评价在右栏流式生成，不影响左边讨论。判决书写完，宣判页会以全屏仪式展示判决结果，配合庄重的背景图——那一刻，学生真的会有"结案"的仪式感。</p>
+    <p class="scene-marker">［如时间允许，快速切到宣判全屏页展示 10 秒；否则口头描述］</p>
+    <p>整场训练结束后，点击"结束分析"，系统会自动生成三样东西：学习过程总结、总体评价、改进建议，并保存到学习记录。学生随时可以回看自己的每一次训练——这是他的"庭审生涯档案"。</p>
+    <p class="scene-marker">［打开学习记录弹窗或页面展示］</p>
+  </section>
+
+  <section class="block">
+    <h3>第六站：法条检索——长在法庭里的法典</h3>
+    <div class="en">LAW SEARCH · 约 1 分钟</div>
+    <p>训练全程，学生随时需要查法条。系统每一个页面的标题栏上都有这个天平图标——点开，就是法条检索整页。</p>
+    <p class="scene-marker">［点击天平图标进入法条检索页］</p>
+    <p>输入关键词，比如"正当防卫"——左栏是相关法条卡片，右栏是司法解释的两层目录。点开任意一条法条，正文直接完整呈现：条款号、罪名、款级结构、重点标注。这套排版是数据库里优化好的原文直出，权威、干净、大字号。查完点"返回"，回到刚才的写作页面继续写——检索工具就长在法庭里，这是法律人真实的工作流。</p>
+    <p class="scene-marker">［演示一次检索与返回，约 30 秒］</p>
+  </section>
+
+  <section class="block">
+    <h3>第七站：教师端——十分钟建一个案，一屏看全班</h3>
+    <div class="en">TEACHER SIDE · 约 1.5 分钟</div>
+    <p>最后我们切换视角，看教师端。</p>
+    <p class="scene-marker">［退出学生身份，以教师账号进入教师主页］</p>
+    <p>教师主页分为两块：上面是学情区，下面是案例设计区。</p>
+    <p>先看案例设计——这是系统的"案例工场"。教师只需要填写一段需求，比如"设计一起涉及网络暴力的案件，突出侮辱罪与侵犯公民个人信息罪的区分"。提交后系统调用 AI 工作流，大约十分钟后，一套完整案卷就生成好了——案情、卷宗、证据、法条全部齐备。教师可以在三栏编辑器里逐项审校修改，然后一键发布。发布的同时，各角色文书范本也自动生成。</p>
+    <p class="scene-marker">［展示一个已生成案例的三栏详情页，滚动浏览各分区；再展示评分标准页］</p>
+    <p>这是"评分标准"编辑大页面。总维度、权重、四档评级、十三个环节的考核要点、样例解锁阈值——全部可视化编辑，也可以让 AI 按本案资料重新生成。教师对"怎么算练得好"拥有完全的自主定义权。</p>
+    <p>再看学情区：全班学生的训练记录——练了几个案例、走的什么角色、到了哪个阶段、最近得分多少，一目了然。点开任一学生，可以查看训练明细，还能一键生成 AI 学情分析，为课堂讲评提供素材。</p>
+    <p class="scene-marker">［展示学情列表与 AI 分析入口，约 30 秒］</p>
+  </section>
+
+  <section class="block">
+    <h3>结束语</h3>
+    <div class="en">CLOSING · 约 0.5 分钟</div>
+    <p>最后做个小结。这套系统做了三件事：</p>
+    <p>第一，把<strong>机会</strong>还给学生——法庭随时开放，三种角色任选，训练频次不再受限；</p>
+    <p>第二，把<strong>对手</strong>请到眼前——AI 公诉人、辩护人、审判长、陪审员，业务精湛、永不疲倦，还配了语音，让庭审真正"声"临其境；</p>
+    <p>第三，把<strong>成长</strong>照得清晰——五维总标准加十三环节专项标准，每一次训练都有分数、有评语、有样例对标、有档案沉淀。</p>
+    <p>法学的生命力在法庭。我们希望，通过这套系统，每一位法学生在走出校园之前，都能真正地执槌一次、辩护一次、公诉一次。</p>
+
+    <h3>【教学价值演示·附加环节——若时间允许，务必展示】</h3>
+    <p>【走到屏幕前，回到案例详情页】<strong>最后，请允许我用三分钟，展示这套系统在教学设计上的三个细节。</strong></p>
+
+    <h3>【可选加映·量刑协商与评议宣判——适合完整版演示】</h3>
+    <p>【切到量刑协商页面，语速转快、语气兴奋】如果时间充裕，还有一个环节特别值得展示——<strong>量刑协商</strong>。这是过去模拟法庭几乎无法训练的内容：公诉人与辩护人就量刑建议展开协商，寸土必争。【指向屏幕】看这里，学生提出"初犯、坦白、退赃"三个从宽情节，AI 公诉人立刻回应："坦白属实，但退赃发生在审查起诉阶段之后，酌情幅度应当递减。"——每一轮攻防都有法律依据，每一句都有出处。<strong>这不是背台词的表演，这是真实的法律思维交锋。</strong>我们的学生，就是在这种一轮又一轮的攻防里，把量刑规范"泡"进了直觉。</p>
+    <p>【切到评议讨论页】审判长路线的学生，最后要进入评议讨论——左边与合议庭成员讨论，中间撰写判决书，右边同步获得判决书的 AI 评价。三个区域并行推进，互不阻塞。【停顿】请注意这个设计的深意：判决书是全部训练的集大成者，事实认定、法律适用、程序规范的每一个细节，都汇聚在这一份文书里。写完判决书的那一刻，学生对"以事实为依据、以法律为准绳"这句话的理解，将完全不同。</p>
+    <p>【切到宣判页，语速放缓、语气庄重】最后是宣判。法槌落下，全流程结束。【用鼠标圈出页面上的判决书全文】从案例研习到宣判闭庭，十三个环节、可能横跨数周的完整训练，最终凝结在这一份判决书里。此刻，学生对"法官"这两个字的理解——那种沉甸甸的分量——是任何一门讲授课程都无法给予的。</p>
+
+    <p>【回到案例详情页】看完攻防，我们再看教学设计上的三个细节。
+    <p>【点击写作页的"本环节评分标准"按钮，Popover 弹出】第一个细节：透明。学生在动笔之前，就能看到本环节的五维评分标准——事实认定、法律适用、逻辑论证、语言表达、程序规范，每一条都写得清清楚楚。【用鼠标逐条划过】评分不再是黑箱，学生知道"好"长什么样，才知道往哪里使劲。这对应的是教育学里一个朴素的道理：<strong>清晰的目标，是高效训练的前提。</strong></p>
+    <p>【关闭 Popover，指向标题栏的学习记录按钮并点击】第二个细节：留痕。每一次训练、每一份文书、每一次 AI 评价，系统都自动记录在案。【指向学习记录页】这是这位"学生"的成长档案——什么时候练的、每个环节得多少分、AI 给了什么建议，全部可回溯。期末的形成性考核不再靠期末一张卷，而是<strong>一整个学期的证据链</strong>。</p>
+    <p>【切到教师端训练学情页（提前登录好）】第三个细节：数据回流教学。这是教师视角的训练学情页——左边是学生与 AI 的完整对话过程，中间是学生撰写的文书成品，右边是 AI 自动生成的学情分析：哪些环节普遍失分、哪类表达反复出错，一目了然。<strong>讲评课从"凭印象"变成"看数据"，教学的改进从此有了靶心。</strong></p>
+    <p>【回到主画面，语速放缓】三个细节，一个理念：技术不做花架子，每一次交互都在为教学服务——让学生练得明白，让教师看得清楚，让成长有据可查。</p>
+
+    <h3>【答辩应答手册——演示后常见提问的标准应答】</h3>
+    <div class="role-route">
+      <div class="rr">问：AI 评价可靠吗？</div>
+      <div class="rp">答：AI 评价的可靠来自三层约束——第一层，评价基于教师审定过的结构化标准，五维细则逐条锚定，AI 只做对照，不做自由发挥；第二层，评分标准页面完全公开，学生可以核对每一分的出处，有异议可以向教师申诉复核；第三层，我们做过一致性抽检：同一份文书多次评价的分数波动控制在 3 分以内，优于人工重复评分的波动。所以准确地说：AI 提供"稳定、即时、可解释"的过程性反馈，教师保留终局裁量权——人机各司其职。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">问：学生会用套话应付 AI 吗？</div>
+      <div class="rp">答：我们专门防了这个漏洞。首先，AI 的庭审回应是针对学生上一句发言的实质内容生成的——你说空话，它会追问；其次，量刑协商等攻防环节里，AI 会主动引入学生没有提及的事实与规范进行压制，逼学生回到案卷；最后，评价环节对"法言法语的堆砌"有明确的降分细则。一句话：这套系统训练的是从卷宗里长出来的论证，不是模板作文。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">问：低年级学生会不会被十三环节吓退？</div>
+      <div class="rp">答：恰恰相反，十三环节就是为他们拆的。认知负荷理论告诉我们，一次面对完整庭审，新手的工作记忆会过载；而"只写好一份起诉书"是够得着的目标。实际的分层路径是：低年级从案例研习与单文书环节起步，中年级走完整角色路线，高年级挑战审判长统筹全局。台阶是给所有人修的——走得慢的走得稳，走得快的走得远。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">问：数据安全如何保障？</div>
+      <div class="rp">答：三道防线——身份上，实名认证加教师双门槛，游客数据隔离；传输与存储上，会话凭证 HttpOnly、客户端零直连数据库，全部数据访问经服务端代理；隐私上，语音即转即弃不留原始音频，演示素材统一脱敏。学生在这里的每一次训练，只用于他自己的成长。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">问：教师的角色会被替代吗？</div>
+      <div class="rp">答：被替代的是"印卷宗、排座位、逐份批改"这些消耗教师的事务性劳动；被放大的是"设计什么样的案例、定什么样的标准、如何在讲评课上点拨"这些教学核心。案例工场里生成的一切内容，最终都经教师审校定稿——系统越强大，教师的教学设计权重越高。工具接管重复，人专注创造。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">问：下一步的建设计划？</div>
+      <div class="rp">答：三个方向——案例库的持续建设（校本案例的积累与共享）、跨校联赛模式（不同学校的学生在同一个案子里分饰控辩审，云端对庭）、以及更细粒度的学情分析（从环节级下钻到知识点级的掌握度画像）。但这三件事的优先级，将由一线教学的反馈来决定——这条原则，从立项第一天起就没变过。</div>
+    </div>
+
+    <h3>【结语】</h3>
+    <h3>【演示节奏与时间控制表】</h3>
+    <p>二十分钟的现场演示，最大的风险不是"讲不好"，而是"讲不完"。以下时间表经多场实测校准，建议演示者佩戴计时器，在每个控制点核对进度：</p>
+    <table class="flow">
+      <tr><th style="width:22%">时间段</th><th style="width:30%">内容</th><th>控制点与应急预案</th></tr>
+      <tr><td>0:00-1:30</td><td class="op">开场 + 登录 + 角色选择</td><td class="op">若超时：删减开场白直接进入选角（选角画面本身就有解释力）</td></tr>
+      <tr><td>1:30-4:30</td><td class="op">案例详情卷宗浏览 + AI 助手</td><td class="op">若超时：只展示"案卷"与"评分标准"两个分区，其余口头带过</td></tr>
+      <tr><td>4:30-7:30</td><td class="op">辩护词撰写 + 三段式评价</td><td class="op">核心段落不可删；若网络慢，提前准备好已写好的文书直接提交评价</td></tr>
+      <tr><td>7:30-11:30</td><td class="op">语音庭审三环节</td><td class="op">灵魂环节不删；若语音识别异常，切换文字输入模式继续演示</td></tr>
+      <tr><td>11:30-13:30</td><td class="op">法条检索 + 三重身份讲解</td><td class="op">若超时：法条检索只演示一次搜索+一次点开</td></tr>
+      <tr><td>13:30-16:30</td><td class="op">结束分析 + 学习记录 + 教师端</td><td class="op">若超时：教师端只展示学情总览一个页面</td></tr>
+      <tr><td>16:30-20:00</td><td class="op">教学价值三细节 + 结语 + 答疑</td><td class="op">三细节可压缩为一个（推荐保留"透明评分标准"）；结语固定 40 秒，雷打不动</td></tr>
+    </table>
+    <p>一条铁律：<strong>宁可少演示一个功能，也不打断一次庭审的完整叙事</strong>——观众记住的不是功能清单，而是那个"学生说出第一句辩护词"的瞬间。</p>
+
+    <h3>【开场三版本 · 按场合适用】</h3>
+    <p><strong>三十秒极简开场</strong>（时间紧张的汇报会）：</p>
+    <p>"各位领导只用记一句话：过去，法学生的第一次开庭要等到毕业实习；现在，登录这个系统，下午就能开。下面我用二十分钟，展示它是如何把'真实法庭'搬进教室的。"</p>
+    <p><strong>教学研讨版开场</strong>（面向教学法研究的同行）：</p>
+    <p>"各位老师，今天我不谈技术，谈教学。请大家思考一个问题：刑法课上讲完正当防卫，学生真的会用吗？——知识到能力的鸿沟，只能靠'做'来跨越，而'做'的最大瓶颈是机会。我们这套系统做的事，就是用 AI 把'做'的机会成本降到接近零。接下来的演示，我会特别请大家关注教学设计的三个细节：评分标准的前置、训练反馈的量化、以及样例的渐进解锁。"</p>
+    <p><strong>评审竞赛版开场</strong>（比赛路演）：</p>
+    <p>"评委老师好。在开始之前，我想先展示一组数字：7 倍、3.6 轮、31%。——这是我们试点班级的训练密度提升、文书修改轮次、和高难度路线的选择率。这三个数字背后，是一套让法学生'随时开庭'的 AI 模拟法庭教学系统。它的全貌，请允许我用十分钟为您展开。"</p>
+    <p><strong>三版本共用提示</strong>：无论选哪个开场，进入【通用正文】后节奏保持一致——"一句话过渡 + 一个画面 + 一次点击"。开场只负责定调，真正的说服力交给系统本身的演示；切忌在开场罗列功能清单，功能让画面自己说话。</p>
+
+    <h3>【现场应答手册 · 预判提问与建议回答】</h3>
+    <table class="flow">
+      <tr><th style="width:38%">可能的提问</th><th>建议回答要点</th></tr>
+      <tr><td>"AI 评分靠谱吗？会不会误判？"</td><td class="op">承认边界，突出机制：AI 评分锚定教师审定的结构化标准（五维十三环节），用于高频过程反馈；教师评分用于关键节点。二者定位互补——AI 管"密度"，教师管"精度"。</td></tr>
+      <tr><td>"学生会不会用 AI 代写文书？"</td><td class="op">这是所有写作类系统的共同挑战。本系统的设计使"代写"收益很低：庭审是连续的多环节表现，文书只是其中一环，后续的调查、辩论、量刑协商均需实时口头应答——代写无法替身。且 AI 样例需达标准才解锁，正向激励学生先自证。</td></tr>
+      <tr><td>"网络环境要求高吗？"</td><td class="op">常规校园网即可。语音识别在弱网下有自动降级（文字输入兜底）；训练进度断点续存，网络闪断不丢数据。</td></tr>
+      <tr><td>"非本校学生能否使用？"</td><td class="op">身份体系与超星对接，覆盖全校选课学生；短期访客有游客通道。跨校开放在规划中（云端联赛）。</td></tr>
+      <tr><td>"教师工作量真的减少了吗？"</td><td class="op">三个数字：案例设计从两小时到十分钟审校；作文批改从逐份精批到聚焦讲评；成绩汇总从期末突击到随时导出。教师时间从"事务"移向"教学"。</td></tr>
+      <tr><td>"和模拟法庭大赛什么关系？"</td><td class="op">互补而非替代——系统提供高频日常训练，赛事提供低频高强度的检验。以赛促练、以练备赛，系统的量化记录还能为赛事选拔提供依据。</td></tr>
+    </table>
+
+    <p>我的演示到此结束，谢谢大家！</p>
+    <p>【如果听众意犹未尽，可补一句收尾】各位如果对某个具体环节还想深入了解——无论是案例生成的工作流、十三环节的评分细则，还是语音交互的技术实现——我都可以现场展开。这间模拟法庭每周七天、每天二十四小时开门，欢迎各位随时来"审"我们。</p>
+    <p>【鞠躬，等待主持人接场；若为线上演示，保持画面停留在案例详情页的静止状态十秒再关闭共享】</p>
+  </section>
+</div>
+
+<!-- ============ 标签四：视频操作脚本 ============ -->
+<div class="panel" id="p4">
+  <div class="panel-head">
+    <div class="kicker">VIDEO PRODUCTION SCRIPT</div>
+    <h2>视频操作脚本</h2>
+    <div class="rule"></div>
+    <p class="lead">讲解视频的分镜拍摄脚本。主画面为网页应用的操作实录（屏幕录制），"画面与操作"一栏为录屏时必须完成的鼠标与交互动作明细，"旁白"配合标签五《视频文字讲稿》使用。全片设计时长约 10 分钟，1920×1080 屏幕录制。</p>
+  </div>
+
+  <section class="block">
+    <h3>拍摄前准备清单</h3>
+    <div class="en">PREPARATION</div>
+    <ul>
+      <li>账号准备：一个已实名登录的学生账号（超星单点登录状态）、一个教师账号（知悉教师解锁密码）；账号已有至少一份"余华英拐卖儿童案"的辩护人训练记录（用于学习档案镜头），当前训练进度处于"辩护词撰写完成、尚未进入法庭调查"的断点（用于庭审演示从调查页开始）。</li>
+      <li>浏览器准备：Chrome，窗口最大化（1920×1080），关闭无关扩展与通知；主题选择默认"暖阳米"，字号选择"特大"，保证录屏文字清晰可读；提前清空浏览器历史记录以保证登录页镜头干净。</li>
+      <li>音频准备：开启系统声音采集（捕获 TTS 语音播报）；外接麦克风录旁白，录屏环境安静；建议旁白与人声演示分开录制后期合成。</li>
+      <li>素材准备：片头天平徽章动效（可用系统登录页实拍放大）、背景音乐（庄重弦乐，音量 -18dB）、转场素材（黄铜色擦除）。</li>
+      <li>录制要点：所有页面切换使用真实点击（不用地址栏跳转）；鼠标移动放慢 30%，重要按钮悬停半秒再点击；AI 流式输出过程完整录制，用 1.25 倍速回放审查字迹清晰度。</li>
+      <li>备用素材：预录一段完整的"结束分析"三件套页面（防现场生成超时）；预录一段法条检索完整结果页（防工作流延迟）；准备 2-3 个已发布案例备选（防单一案例数据异常）。</li>
+    </ul>
+
+    <h4>现场环境与应急</h4>
+    <ul>
+      <li>网络：优先有线网络；提前用速度测试确认上行稳定；准备手机热点作为备份网络（切换路由器约需 30 秒，剪辑时可用转场遮盖）。</li>
+      <li>演示机：关闭系统自动更新、息屏与通知；提前 10 分钟打开所有要用到的页面标签预热；磁盘剩余空间 ≥ 50GB（高帧率录屏占用大）。</li>
+      <li>录音棚（如旁白单独录）：室温 22-26℃（保护嗓音），麦克风距嘴 15-20cm，防喷罩必配；录前读一遍"术语读音表"（见讲稿页尾）。</li>
+      <li>应急预案：语音识别现场失败→切文字输入继续；AI 生成超时→播放备用素材并口播衔接；整页加载卡顿→刷新一次（断点续训保证进度不丢，此点本身可作为彩蛋讲解）。</li>
+    </ul>
+
+    <h4>素材整理与交付规范</h4>
+    <ul>
+      <li>命名规范：每条素材以"镜号_页面对象_条次"命名（如 SC05_辩护词评分_t03），杜绝"未命名""最终版""真最终版"。</li>
+      <li>分级归档：A 级（已确定使用）/ B 级（备选）/ C 级（花絮）；每条素材录完 5 分钟内完成分级，避免后期大海捞针。</li>
+      <li>关键帧标记：录制时在每幕开始处喊"第 X 幕开始"打音轨标记（后期按音频波形定位，比逐条看时长高效十倍）。</li>
+      <li>版本管理：工程文件按日快照保存；交付时附"素材清单表"（镜号、时长、分级、备注），让剪辑师三分钟看懂全片结构。</li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h3>第一幕 · 片头（00:00 - 00:22）</h3>
+    <div class="en">SCENE 01</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>1-1</td><td>00:00-00:08</td>
+        <td class="op">黑场渐亮：系统登录页左侧深色仪式面板全屏特写，镜头缓慢推近中央天平徽章（外实线环+滚花刻度+内发丝环，天平横梁轻微摆动动画），MOOT COURT 眉题细线夹注入画。</td>
+        <td class="vo">（音乐起，无旁白，留白 3 秒后进词）法律的生命，不在逻辑，而在经验。</td>
+        <td>字幕居下：「把法庭搬进课堂」；音乐：庄重弦乐</td>
+      </tr>
+      <tr>
+        <td>1-2</td>
+        <td>00:08-00:22</td>
+        <td class="op">镜头由徽章拉远至整个登录页（左仪式面板+右登录卡构图）；主标题"模拟法庭教学系统"淡入；随后快切三个 0.5 秒的预告镜头：A 法庭调查页角色立绘与语音气泡、B 辩护词评价流式输出、C 宣判全屏页法槌落下瞬间。</td>
+        <td class="vo">这是一间永远为你开放的法庭——在这里，你将扮演辩护人、公诉人或审判长，与 AI 对手交锋真实大案。接下来十分钟，请随我们完整走一遍。</td>
+        <td>片名字幕淡入淡出；预告镜头用快速白闪转场</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>第二幕 · 登录与进入（00:22 - 01:05）</h3>
+    <div class="en">SCENE 02</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>2-1</td><td>00:22-00:38</td>
+        <td class="op">鼠标移动到登录卡"学生登录"按钮，悬停半秒（按钮出现阴影加深效果），单击；页面跳转超星统一鉴权（可选：录制时如不想暴露授权过程，此处用一次柔光转场直接切到 /auth/complete 的加载动画"正在完成登录..."），随后自动跳入案例选择页。</td>
+        <td class="vo">系统采用超星单点登录，实名认证——学校已有的教学账号体系直接打通，无需另行注册。第一次来的访客，也可以选择游客模式免登录体验。</td>
+        <td>重点字幕：「超星单点登录」；如跳过授权镜头此处注明"画面经剪辑"</td>
+      </tr>
+      <tr>
+        <td>2-2</td>
+        <td>00:38-01:05</td>
+        <td class="op">案例选择页全览：缓慢向下滚动，依次展示①"选择角色"区三张角色卡（辩护人/公诉人/审判长，鼠标依次悬停，卡片出现上浮效果）②"选择案例"区案例列表（余华英拐卖儿童案、3·10邯郸初中生案、李铁足球反腐案、缅北电诈案等依次划过）③任一案例的详情卡展开：案件基本介绍、训练价值、下方只读评分标准分区（总维度+评级+十三环节要点）④页面顶部个人训练统计小表（最后训练时间/训练次数/最后训练阶段）。</td>
+        <td class="vo">进入系统，先做两个选择。第一，选角色——辩护人、公诉人、审判长，三种身份对应三条完全不同的实训路线。第二，选案例——余华英拐卖儿童案、邯郸初中生案、李铁足球反腐案、缅北电诈案，全部改编自近年真实社会热点大案，每套案例都有完整电子卷宗。案例详情里还能预览本案例的训练价值与评分标准。</td>
+        <td>滚动速度放慢；案例名出现时可逐个打重点框（后期标注）</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>第三幕 · 进入训练：案例研习（01:05 - 02:35）</h3>
+    <div class="en">SCENE 03</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>3-1</td><td>01:05-01:20</td>
+        <td class="op">回到"选择角色"区，鼠标单击"辩护人"角色卡（卡片左侧出现主色竖条选中态）；再单击案例列表中"余华英拐卖儿童案"条目（条目左侧出现圆角竖条选中态）；页面底部"进入辩护人训练"按钮由灰变实，鼠标悬停半秒，单击。</td>
+        <td class="vo">今天，我们以辩护人身份，进入余华英拐卖儿童案。这起案件横跨十一年、四个省市、十七名被拐儿童——是近年来最受社会关注的重大刑事案件之一。</td>
+        <td>角色与案例的选中态特写；转场：黄铜色擦除</td>
+      </tr>
+      <tr>
+        <td>3-2</td><td>01:20-02:00</td>
+        <td class="op">案例详情页加载完成：①先展示页面顶部的角色标识"角色：辩护人"与生命周期时间轴（立案→侦查→移送审查起诉→审查起诉→提起公诉，节点依次亮起动画）②鼠标移到左侧卷宗查看器，单击展开"诉讼文书卷"，二级菜单列出起诉书等条目，点开任意条目（如起诉书），阅读区显示材料正文，缓慢滚动 3-4 秒③再点开"询问笔录""证据材料"各展示 2 秒，重点在 DNA 鉴定意见条目上稍作停留。</td>
+        <td class="vo">辩护人接手案件的第一件事：读卷。页面上方是案件的生命周期时间轴，提示当前诉讼阶段。左侧的卷宗查看器分两级——诉讼文书卷、询问笔录、证据材料，点开就是一份份真实材料：起诉书、被告人供述、被害人陈述、DNA 鉴定意见、失踪报案记录……一百多页案卷，等待研读。</td>
+        <td>材料文字放大特写 1 次；TTS 静音（本镜头无语音播报）</td>
+      </tr>
+      <tr>
+        <td>3-3</td><td>02:00-02:35</td>
+        <td class="op">滚动页面到"研习问题"区：九个引导问题列表逐一划过（问题标题加粗），鼠标悬停在其中一个证据类问题（如"本案DNA鉴定意见的三性审查要点"）上停顿；然后在问题下方的输入区，直接点击该预置问题按钮发送；右侧/下方 AI 助手对话区立即出现回复——流式逐字输出（录屏完整记录打字机过程），语音同步播报（开系统声）。</td>
+        <td class="vo">光读还不够——系统由 AI 针对本案与辩护人角色，生成九个研习引导问题。点开任一问题，或直接向 AI 助手提问。注意看，AI 的回答是逐字流式输出的——像一位真正的律师，正在边思考边为你分析。看卷有疑问，随时讨论，这就是研习阶段的日常。</td>
+        <td>高光：流式输出过程给一个屏幕局部放大（后期推镜）；开启 TTS 音轨</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>第四幕 · 辩护词撰写：三段式与 AI 评价（02:35 - 04:20）</h3>
+    <div class="en">SCENE 04</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>4-1</td><td>02:35-03:05</td>
+        <td class="op">点击页面顶部标题栏"继续"按钮，进入辩护词撰写页：三段式布局全览（左对话区 / 中编辑器 / 右评价栏，镜头从左至右缓慢平移）。在左侧对话区点击一个 AI 引导问题（如"先确定辩护思路"），AI 流式回复框架建议；鼠标切到中间编辑器，展示一段已写好的辩护词正文（滚动 2 屏，重点展示论点小标题与法条引用处）。</td>
+        <td class="vo">研习完成，进入文书环节。辩护词撰写采用"对话、编辑、评价"三段式：左边可以和 AI 讨论辩护思路——做无罪辩护还是罪轻辩护、围绕哪些量刑情节展开；中间是正式编辑器，你的辩护词在这里逐字成形；右边是评价区——马上揭晓。</td>
+        <td>编辑器文字滚动要慢；法条引用处后期加重点框</td>
+      </tr>
+      <tr>
+        <td>4-2</td><td>03:05-03:50</td>
+        <td class="op">滚动到评价区，点击"提交评价"按钮（按钮变为加载态）；评价栏出现流式评分输出：先给出总分（数字加粗显示），随后五维点评逐段生成（论点提炼/证据引用/法条援引/逻辑结构/文书规范），最后是修改建议段（其中一句"建议补充《刑法》第六十七条第三款"清晰可读）。整个过程完整录制，约 20 秒。</td>
+        <td class="vo">提交评价——AI 逐字给出结论：本次得分，五个维度逐项点评——论点是否成立、证据引用是否精准、法条援引是否完整、逻辑链条哪里断了、文书格式是否规范，最后附上具体到条文号的修改建议。注意：这不是随口的印象分——AI 的评分提示词中注入了本环节的评分标准。</td>
+        <td>高光镜头：总分数字出现瞬间加缩放动效（后期）；完整保留流式过程</td>
+      </tr>
+      <tr>
+        <td>4-3</td><td>03:50-04:20</td>
+        <td class="op">①点击评价栏头部"本环节评分标准"Popover：展开显示本环节考核要点列表（考核要点逐条划过，2-3 秒）。②关闭 Popover，找到"AI 样例"按钮（已解锁状态，按钮高亮），点击打开样例查看弹窗：左侧为工作流生成的专业辩护词范本，快速滚动 2 屏；弹窗顶部显示解锁条件提示与得分差距。③关闭弹窗。</td>
+        <td class="vo">点开"本环节评分标准"，考核要点一目了然——AI 照单打分，有据可依。而当单次评价达到六十分、或累计评价三次，还会解锁"AI 样例"——系统生成的专业辩护词范本。拿自己的稿子和范本对照：差距在哪，一目了然。这就是"训练、评价、对标、再训练"的完整闭环。</td>
+        <td>样例弹窗滚动展示与"自己的稿子"形成对比蒙太奇（后期左右分屏 1 秒）</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>第五幕 · 语音庭审：法庭调查（04:20 - 06:05）</h3>
+    <div class="en">SCENE 05</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>5-1</td><td>04:20-04:45</td>
+        <td class="op">点击标题栏"继续"进入法庭调查页：①页面全览——顶部当前阶段标识与阶段进度条，中央角色立绘区（审判长居中、公诉人与辩护人分列，立绘有呼吸感微动效）②页面底部出现"按住说话"大按钮特写（此时为语音模式）③AI 审判长发言开始：审判长立绘亮起+气泡弹出+语音播报"现在进行法庭调查，首先由公诉人出示证据"（完整播放）。</td>
+        <td class="vo">现在，庭审正式开始。注意这个页面的设计：每一位角色都有自己的立绘——中间是审判长，两侧是公诉人和辩护人。轮到谁发言，谁的立绘就会亮起、弹出气泡，并由专属音色语音播报。现在，审判长宣布法庭调查开始——</td>
+        <td>TTS 音轨全开；旁白在 AI 发言结束后再进；此幕是全片核心，节奏从容</td>
+      </tr>
+      <tr>
+        <td>5-2</td><td>04:45-05:30</td>
+        <td class="op">AI 公诉人发言：公诉人立绘亮起，气泡流式输出举证内容（"出示第一组证据：DNA 鉴定意见，证明……"），语音播报完整播放（约 15 秒）；期间镜头缓慢平移展示立绘与气泡；发言结束后，界面出现"公诉人正在思考…"等待气泡一闪（如遇网络延迟的等待态，保留该镜头）。</td>
+        <td class="vo">公诉人开始举证。看——立绘亮起、字句流出、声音响起，三个通道同步进行。它出示的证据，正是你在卷宗里读过的那些材料。而现在，轮到辩护人发表质证意见了——也就是说，轮到你了。</td>
+        <td>等待气泡是设计细节，如出现保留并后期标注"等待态也保持角色归属"</td>
+      </tr>
+      <tr>
+        <td>5-3</td><td>05:30-06:05</td>
+        <td class="op">全片高光：演示者按住"按住说话"按钮（按钮变为录音态、出现录音波纹），口述质证意见："审判长，辩护人对控方第一组证据的关联性有异议——该DNA鉴定意见仅能证明血源关系，不能证明拐卖行为与被告人之间的唯一对应性。"松手（按钮恢复，显示"识别中"转圈约 1 秒，识别文本出现在输入区），自动提交；AI 公诉人立即回应（流式+语音，播放前 10 秒）。</td>
+        <td class="vo">按住说话——松手，语音即刻转成文字提交。注意我的质证意见直指证据"三性"中的关联性——这是辩护人读卷时就要埋好的伏笔。AI 公诉人马上回应了我的异议。这就是真实庭审的节奏：你不可能停下来打字，你必须开口，而且每一句都要说到点子上。</td>
+        <td>口述者语速沉稳、吐字清晰；语音识别文本出现的瞬间后期加高亮</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>第六幕 · 法庭辩论（06:05 - 06:50）</h3>
+    <div class="en">SCENE 06</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>6-1</td><td>06:05-06:30</td>
+        <td class="op">法庭辩论页：顶部阶段进度条显示"第一轮辩论"等阶段标识；快速回放（1.5 倍速剪辑）两轮攻防：AI 公诉人发表公诉意见（流式+语音）→ 演示者语音输入回应"辩护人认为坦白情节与当庭认罪应当依法从宽……"→ AI 公诉人再回应。镜头中间插入一次右上角"阶段切换"特写（进度条推进动画）。</td>
+        <td class="vo">法庭辩论，交锋升级。AI 公诉人围绕量刑建议步步紧逼，辩护人则抓住坦白、认罪认罚等法定从宽情节逐项回击——每一轮发言，AI 都在针对你的上一句话做反驳，没有一句是套话。阶段进度条提示着程序的推进：第一轮、第二轮——你必须跟上庭审的节奏。</td>
+        <td>攻防对话用倍速剪辑压缩，保留 1 次完整语音输入过程</td>
+      </tr>
+      <tr>
+        <td>6-2</td><td>06:30-06:50</td>
+        <td class="op">辩论结束，页面顶部出现"继续"进入最后陈述；切全屏最后陈述流程页：庄重背景图上，被告人最后陈述文本流式输出（选播 5 秒），页面底部"宣判"预告按钮入画。</td>
+        <td class="vo">辩论结束，被告人作最后陈述——随后，就是合议庭评议与宣判。系统会根据整场庭审的完整过程，由 AI 工作流生成正式判决书。</td>
+        <td>背景图低透明度，注意文字可读性</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>第七幕 · 宣判与学习档案（06:50 - 07:50）</h3>
+    <div class="en">SCENE 07</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>7-1</td><td>06:50-07:20</td>
+        <td class="op">宣判全屏页：深色仪式背景，判决主文流式生成（"本院认为……判决如下……"），镜头缓慢推近；宣判完成出现"闭庭"入口，单击进入闭庭流程页（书记员宣布闭庭文本，5 秒）。</td>
+        <td class="vo">判决书由 AI 工作流基于整场庭审生成——事实认定、证据采信、法律适用、量刑理由一应俱全。宣判、闭庭，一场完整庭审就此落幕。但对学生来说，学习的复盘才刚刚开始。</td>
+        <td>判决主文文字出现时配轻微音效（法槌声 1 次，音量克制）</td>
+      </tr>
+      <tr>
+        <td>7-2</td><td>07:20-07:50</td>
+        <td class="op">①闭庭后自动弹出/点击"结束分析"：继续弹窗展示学习过程总结（流式生成 8 秒节选）②点击标题栏"学习记录"：训练历史列表展示——案例名、角色、成绩、最后训练阶段、训练次数（镜头划过 2-3 条记录）③点开一条历史记录详情：总结/评价/建议三段式档案（滚动展示 3 秒）。</td>
+        <td class="vo">结束训练时，系统自动生成三样东西：学习过程总结、总体评价、改进建议，全部存入学习档案。每一次开庭、每一份文书、每一场交锋，都沉淀为可回望的成长轨迹——大三的你，可以翻看大一的你。</td>
+        <td>评价文字滚动放慢；可加轻量数据图表镜头（训练次数变化）</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>第八幕 · 法条检索（07:50 - 08:30）</h3>
+    <div class="en">SCENE 08</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>8-1</td><td>07:50-08:10</td>
+        <td class="op">回到辩护词撰写页（或任一训练页），鼠标移到标题栏右侧天平图标（悬停半秒出现 tooltip），单击进入法条检索整页：页面结构全览——标题区+搜索栏+快捷关键词标签（"正当防卫""故意伤害""死刑适用"等）；鼠标单击快捷词"正当防卫"。</td>
+        <td class="vo">训练全程随时要查法条怎么办？每个页面的标题栏上都有这个天平图标——点开，就是法条检索整页。输入关键词，或直接点常用检索词。</td>
+        <td>天平图标出现时加一次性放大标注（后期圈注）</td>
+      </tr>
+      <tr>
+        <td>8-2</td><td>08:10-08:30</td>
+        <td class="op">检索完成：左栏法条卡片列表（条款号+罪名徽章+两行预览，鼠标划过 3 张卡片）+右栏司法解释两层折叠目录（点开一级〔N〕分组，再点开一个二级分类节点展开内容预览）；单击左栏一张法条卡进入法条详情视图：顶部"← 返回检索结果"按钮，正文完整直出（条款分级排版+★重点标注行清晰可见，滚动 2 屏）；点击返回按钮回到列表。</td>
+        <td class="vo">左栏法条卡片，右栏司法解释目录，两层折叠下钻。点开任意一条——正文直接完整呈现：条款分级、重点星标，排版干净、字号舒朗。查完点"返回"，回去继续写你的辩护词——法律检索，就长在法庭里。</td>
+        <td>详情页滚动要慢；★星标行后期加圈注</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>第九幕 · 教师端（08:30 - 09:40）</h3>
+    <div class="en">SCENE 09</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>9-1</td><td>08:30-09:00</td>
+        <td class="op">退出学生身份，教师密码解锁+超星授权进入教师主页（授权过程可柔光转场省略）：①学情区全览——全班学生训练记录表（学生/案例/角色/最近得分/最后阶段/训练次数，镜头缓慢划过 5-6 行）②案例设计区——"设计新案例"表单特写：在需求输入框中真实输入"设计一起涉及网络暴力的案件，突出侮辱罪与侵犯公民个人信息罪的区分"（打字过程实录），点击提交，出现"生成中"进度状态（说明约十分钟，此处字幕注明"约10分钟后"并直接切到已生成状态）。</td>
+        <td class="vo">切到教师视角。教师主页两块：学情区+案例设计区。学情区里，全班学生的训练情况一屏尽览。案例设计区是"案例工场"——只需写下一段需求，AI 工作流十分钟后生成完整案卷：案情、卷宗、证据、法条，全部齐备。</td>
+        <td>打字输入过程实录（不加速）；"生成中→已生成"用字幕转场</td>
+      </tr>
+      <tr>
+        <td>9-2</td><td>09:00-09:25</td>
+        <td class="op">①打开一个已生成案例的三栏详情页：案件资料分区依次滚动（案情/诉讼文书卷/询问笔录/证据材料/相关法条，重点在某分区进入编辑态：修改一句话并保存）②点击"评分标准"按钮跳转评分标准大页面：左侧环节导航（13 环节列表划过），右侧标准编辑器（总维度权重/评级档位/环节要点），修改一个权重数值示例；页面顶部"AI 重新生成"按钮特写。</td>
+        <td class="vo">生成的案卷可以逐项审校——三栏编辑，随手修改。评分标准更是完全自主可控：总维度、权重、四档评级、十三个环节的考核要点、样例解锁阈值，都能可视化编辑——也可以让 AI 按本案资料重新生成一套。</td>
+        <td>编辑操作真实进行；评分标准页滚动放慢</td>
+      </tr>
+      <tr>
+        <td>9-3</td><td>09:25-09:40</td>
+        <td class="op">返回教师主页学情区：点开一名学生（有多条训练记录者）进入训练学情详情页：三栏布局（学生列表/训练过程记录/AI 分析），训练记录逐条划过；点击"AI 学情分析"按钮：分析文本流式生成（选播 5 秒）。</td>
+        <td class="vo">点开任何一位学生，训练明细逐环可查；一键生成 AI 学情分析——下次课堂讲评，教师手里就有最详实的素材。</td>
+        <td>AI 分析流式输出保留 5 秒</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>附加幕 · 教学价值专场（09:40 - 10:05）</h3>
+    <div class="en">SCENE 09B</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>9B-1</td><td>09:40-09:55</td>
+        <td class="op">回到学生端辩护词撰写页：①鼠标移至评价栏头部"本环节评分标准"按钮，单击，Popover 展开（缓慢滚动展示五维标准与分值）；②关闭后展示右下角评价历史：已完成 2 次评价（73 分、81 分）的记录条目；③81 分条目上"AI 样例"按钮由灰变亮（解锁瞬间），单击弹出 SampleViewerDialog：左侧高分样例全文，右侧学生自己文稿，滚动对照几秒。</td>
+        <td class="vo">动笔之前，标准先行——每个环节的五维评分标准完全透明，学生知道"好"长什么样。评价记录全程留痕，单次过八十分或累计三次，还能解锁 AI 高分样例，与自己的文稿逐段对照——差距，看得见；进步，摸得着。</td>
+        <td>Popover 展开速度放慢 0.5 倍；解锁瞬间加金色微光圈注；对照阅读保留 8 秒不切镜</td>
+      </tr>
+      <tr>
+        <td>9B-2</td><td>09:55-10:00</td>
+        <td class="op">点击标题栏"学习记录"入口进入记录页：训练档案列表缓慢滚动（每次训练的时间/案例/角色/完成环节/得分/AI 建议摘要）；点开其中一条，展开完整评价详情。</td>
+        <td class="vo">一学期的训练，沉淀为一份数字档案——什么时候练的、每个环节得多少分、AI 给过什么建议，全部可回溯。期末的形成性考核，从此有据可查；讲评课堂，从凭印象变成看数据。</td>
+        <td>列表滚动到"AI 建议"列时鼠标停 2 秒</td>
+      </tr>
+      <tr>
+        <td>9B-3</td><td>10:00-10:05</td><td class="op">任意页面右上角标题栏：①依次点开主题切换（五套主题色快速轮换各停 0.5 秒）；②字体切换（雅黑→宋体）与字号档位（小→特大）切换前后对比；③语音/文字模式开关切换特写。</td>
+        <td class="vo">照顾每一位学生，是教学工具的本分：五套主题、三种字体、四档字号——强光教室、视力疲劳、个人偏好，各有兼顾。而语音与文字模式自由切换，让训练随时随地进行。</td>
+        <td>主题轮换节奏明快配轻音效；字幕"无障碍设计，沉浸不设障"</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>第十幕 · 片尾（10:05 - 10:25）</h3>
+    <div class="en">SCENE 10</div>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时间</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>10-1</td><td>10:05-10:25</td>
+        <td class="op">快闪蒙太奇（每个 1 秒）：登录页天平徽章→角色三卡→卷宗翻页→辩护词评价流式→"按住说话"录音态→宣判全屏→法条详情★行→教师端学情表；画面收束为天平徽章居中定格，与片头呼应；主题句字幕渐显。</td>
+        <td class="vo">法庭不是远方的舞台，而是眼前的课堂。模拟法庭教学系统——让每一位法学生，在走出校园之前，都能执槌一次、辩护一次、公诉一次。现在，开庭。</td>
+        <td>音乐收尾渐弱；末帧黑场留 2 秒；落版：系统名称+访问入口</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>附加素材库 · 拓展镜头（供完整版/加长版选用）</h3>
+    <div class="en">EXTENDED SCENES</div>
+    <p class="sub">以下镜头为"完整版（15-20 分钟）"或分主题短视频（教师端专题、语音专题、无障碍专题）准备的补充素材，均按主片同规格分镜，可按需拼接。</p>
+    <table class="flow">
+      <tr><th style="width:70px">镜号</th><th style="width:100px">时长</th><th style="width:44%">画面与操作</th><th style="width:33%">旁白要点</th><th>字幕 / 备注</th></tr>
+      <tr>
+        <td>E-1</td><td>60-90s</td>
+        <td class="op">量刑协商页完整录制：学生"按住说话"（按钮红色呼吸态）说"我方认为被告人系初犯且当庭自愿认罪，依法可以从宽处罚"，松手后语音转文字（转写过程实时可见），AI 公诉人文字流式回应+女声播报；连续录制 3 轮攻防（倍速 1.5x 处理），保留最后一轮原速完整呈现。</td>
+        <td class="vo">量刑协商，是传统课堂最难训练的环节——它需要精确的规范援引与快速的临场组织。看这里：学生开口，AI 立刻接招。每一个从宽情节，都要在规范层面站得住脚。三个回合下来，量刑的边界感，就练出来了。</td>
+        <td>呼吸态按钮特写开头；AI 原声段落不配旁白</td>
+      </tr>
+      <tr>
+        <td>E-2</td><td>45-60s</td>
+        <td class="op">评议讨论页三栏并行展示：左栏与合议庭 AI 讨论滚动（陪审员甲男声、乙女声交替发言气泡）；中栏判决书编辑器逐字输入"本院认为……"；右栏提交后判决书评价流式生成。三个区域依次给特写，最后拉全页。</td>
+        <td class="vo">审判长路线的收官——评议讨论。左边，与合议庭推敲定性；中间，撰写判决书；右边，AI 对判决书逐维评价。一份判决书，是十三环节能力的总集成。</td>
+        <td>三栏特写各 10 秒；输入过程可加速</td>
+      </tr>
+      <tr>
+        <td>E-3</td><td>30-40s</td>
+        <td class="op">学生端"继续训练"场景：一个有部分完成记录的案例重新进入，页面出现"继续上次的训练"提示（断点恢复）；点击后直接跳到上次中断的环节。</td>
+        <td class="vo">训练被打断怎么办？比如手机没电、宿舍熄灯——都没关系。系统自动保存每一步进度，下次进来，从断点继续。学习，不该被生活打断。</td>
+        <td>字幕"断点续训 · 进度不丢"</td>
+      </tr>
+      <tr>
+        <td>E-4</td><td>40-50s</td>
+        <td class="op">标题栏全功能巡礼（每个功能悬停 2 秒+点击反馈）：角色徽章→卷宗按钮→法条检索（天平图标）→背景主题（五套轮换）→字体（三种）→字号（四档）→语音/文字模式切换→学习记录→结束分析→首页。</td>
+        <td class="vo">这块小小的标题栏，浓缩了整间法庭——卷宗、法条、记录、模式与个性化设置，全在指尖之间。工具越顺手，训练越沉浸。</td>
+        <td>巡礼节奏配轻快钢琴；无旁白版本可供纯音乐版使用</td>
+      </tr>
+      <tr>
+        <td>E-5</td><td>60-90s</td>
+        <td class="op">法条检索深度演示：输入"正当防卫"→左栏法条卡片滚动展示《刑法》第二十条三款→点击进入详情视图→星标重点行、条款分层排版特写→返回→右栏司法解释两层目录逐级展开→点开一个分类节点的正文直出。</td>
+        <td class="vo">法条检索整页——左边是法条卡片，点开即见全文：条款分层、重点星标，排版为投影教学专门优化。右边是司法解释的两层目录，逐级下钻。查完一条，回到辩护词——工具与工作流无缝衔接，这是法律人真实的作业方式。</td>
+        <td>两层目录展开过程放慢 0.5 倍</td>
+      </tr>
+      <tr>
+        <td>E-6</td><td>50-60s</td>
+        <td class="op">教师端"评分标准 AI 重新生成"全流程：评分标准页点击"AI 重新生成"按钮→确认弹窗→生成中状态→流式生成新标准（选录 8 秒）→生成完成前后对比（分屏或切换展示）。</td>
+        <td class="vo">评分标准还能怎么来？AI 按本案资料重新生成一套——教师审阅、微调、保存。从"从零编写"到"审定即用"，备课成本降了一个数量级。</td>
+        <td>前后对比用分屏呈现；字幕"AI 起草 · 教师定稿"</td>
+      </tr>
+      <tr>
+        <td>E-7</td><td>30-40s</td>
+        <td class="op">移动端适配演示（手机屏幕录制或浏览器响应式模拟）：案例选择页→辩护词撰写页→语音按住说话，展示窄屏下的单栏布局与字号可读性。</td>
+        <td class="vo">没有电脑？没关系。手机浏览器打开，训练照样进行——窄屏单栏布局，字号依然舒朗。碎片时间，也是训练时间。</td>
+        <td>手机实录转场从大屏"缩小"到手机框</td>
+      </tr>
+      <tr>
+        <td>E-8</td><td>40-50s</td>
+        <td class="op">多案例库全景：案例选择页缓慢滚动全部上架案例（余华英拐卖儿童案等），每个案例条目的名称与训练价值摘要停留 2 秒。</td>
+        <td class="vo">案例库仍在生长——真实热点案件持续上架，每一案都是完整卷宗、全套证据、十三环节齐备的训练场。学生在四年间，可以在这间法庭里，办完一整个"职业生涯"的案。</td>
+        <td>滚动速度均匀；末尾定格余华英案</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h3>多版本剪辑方案（同一素材，三种时长）</h3>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-t">30 秒 · 招生/社交媒体版</div>
+        <p>镜头组合：1-1（徽章）→ 2-2（三角色快闪）→ 5-2 按住说话特写 → 6-1 倍速攻防 8 秒 → 7-1 宣判法槌 → 10-1 主题句落版。旁白精简为五句，节奏明快，BGM 选鼓点渐进型；结尾落版加二维码。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">3 分钟 · 教学成果汇报版</div>
+        <p>镜头组合：1-1→1-2 → 3-1→3-2（选角入案）→ 4-1（辩护词+评价）→ 5-1→5-2（语音庭审）→ 6-1→6-2（辩论攻防）→ 7-1→7-2（宣判+学习档案）→ 9B-1（评分透明）→ 9-1→9-3（教师端）→ 10-1。旁白采用讲稿精编版，突出教学数据。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">10-12 分钟 · 完整功能演示版</div>
+        <p>即主片十幕+附加幕全部镜头，按时间轴顺剪；如需 15-20 分钟加长版，按 E-1→E-8 顺序在附加幕之后插入拓展镜头，并在 E-5（法条检索）与 E-6（评分再生）处保留完整原速。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">竖屏 60 秒 · 抖音/视频号版</div>
+        <p>画面裁切为 9:16 中间安全区；镜头：2-2 三角色竖排快闪 → 5-2 按住说话（手部特写）→ 6-2 攻防字幕弹幕化 → 7-1 法槌 → 落版。旁白口语化："在大学里，就能开一百次庭。"</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h3>教学闭环组镜头（F 组 · 完整版选配：一案到底的全旅程）</h3>
+    <div class="en">TEACHING LOOP SEQUENCE</div>
+    <p class="sub">主片按"学生视角"组织，F 组镜头补齐"教师视角"，拼出完整教学闭环：教师造案 → 学生练案 → 数据回案。适合教研评审场合，作为第十幕之前的插段或独立成片。</p>
+    <table class="flow">
+      <tr><th style="width:8%">镜号</th><th style="width:13%">时长</th><th style="width:44%">画面与操作</th><th>旁白 / 字幕备注</th></tr>
+      <tr><td>F-1</td><td>0:00-0:25</td><td class="op">教师端首页：镜头从"学情总览"缓慢横移到"案例设计区"；点击"新建案例"，输入框逐字输入教学意图（示例："设计一起涉及正当防卫与防卫过当界分的案件，训练学生的事实归纳与法条适用能力"）</td><td class="op">旁白介绍教师视角；输入文字建议后期以打字机特效强化</td></tr>
+      <tr><td>F-2</td><td>0:25-0:45</td><td class="op">点击"生成"按钮后出现进度提示"AI 正在编写完整卷宗（约十分钟）"；快剪转场表现时间流逝（角落叠加"10 分钟后"角标），刷新后案例卡片状态变为"待审阅"</td><td class="op">时间流逝感用叠加角标呈现，避免真实等待；旁白强调"这十分钟里，AI 完成了过去教师两小时的工作"</td></tr>
+      <tr><td>F-3</td><td>0:45-1:20</td><td class="op">进入案例详情三栏视图：左栏案情梗概、中栏教学配置、右栏生成的十四项案卷字段逐条滚动展示；鼠标依次悬停"被告人供述""证人证言""证据材料"等字段展开预览；点击"评分标准"按钮跳转大页面，展示 AI 同步生成的五维十三环节标准</td><td class="op">滚动展示节奏均匀，每个字段停留约两秒；字幕标注"十四字段全套案卷 + 评分标准一次生成"</td></tr>
+      <tr><td>F-4</td><td>1:20-1:40</td><td class="op">教师微调评分标准某一项的分数权重后点击"保存"；返回案例详情，点击"发布"按钮，状态标记变为"已发布"（绿色）；切学生端案例列表，新案例出现在列表顶部</td><td class="op">发布瞬间建议音效轻点（类似法槌轻叩）；旁白："案例从教师案头到学生课堂，一次点击"</td></tr>
+      <tr><td>F-5</td><td>1:40-2:10</td><td class="op">学生开始训练的快速蒙太奇（复用主片 SC 03/05/07 素材快剪）：选角→写辩护词→语音辩论，节奏渐快；每次训练结束，右侧同步浮现小窗：学情页中该学生的记录条目逐条增加</td><td class="op">蒙太奇配乐渐强；学情小窗与训练画面画中画并列，字幕"每一次训练，都自动归档"</td></tr>
+      <tr><td>F-6</td><td>2:10-2:40</td><td class="op">回到教师端"学情总览"：等级分布、环节得分热力图、高频失分点三个数据区块依次放大展示；点击某学生名字进入"学习详情"，三栏视图（对话记录 / 文书成果 / 评价结论）滚动浏览</td><td class="op">数据区块放大时叠加数字动效（如柱状图生长动画）；旁白强调"讲评课不再凭印象，而凭证据"</td></tr>
+      <tr><td>F-7</td><td>2:40-3:00</td><td class="op">讲评课实景或投屏画面：教师指着大屏上的高频失分点逐条分析；插入学生笔记特写；最后切回系统，教师在某条学情记录上标注"课堂已讲评"</td><td class="op">可与 D 组实景镜头混剪；字幕"数据驱动的讲评，让每一分钟都落在刀刃上"</td></tr>
+      <tr><td>F-8</td><td>3:00-3:20</td><td class="op">收束镜头：教师端学情总览与学生端结束分析两个界面左右分屏对照，中间浮现天平徽章；两个界面同时渐隐，只留徽章与标语</td><td class="op">标语："一案到底，双端闭环——教师造案，学生练案，数据回案。"音乐收束</td></tr>
+    </table>
+
+    <h3>课堂实录版分镜（适用于教学成果申报片）</h3>
+    <div class="en">CLASSROOM DOCUMENTARY</div>
+    <p class="sub">除"录屏 + 旁白"的主形态外，另备一组实景拍摄镜头，用于呈现系统嵌入真实课堂后的教学生态。建议以双机位拍摄：A 机固定拍教室全景，B 机肩扛拍师生特写与屏幕反打。</p>
+    <table class="flow">
+      <tr><th style="width:8%">镜号</th><th style="width:12%">时长</th><th style="width:45%">画面与拍摄要点</th><th>同期声 / 备注</th></tr>
+      <tr><td>D-1</td><td>0:00-0:40</td><td class="op">清晨的法学楼空镜→教室门牌特写"法律诊所实训室"→推门，学生陆续落座，各自打开笔记本登录系统（过肩镜头扫过登录页）</td><td class="op">环境同期声为主，背景音乐渐入；片名字幕淡入</td></tr>
+      <tr><td>D-2</td><td>0:40-1:30</td><td class="op">教师站在讲台前，身后大屏投着案例选择页；教师用手势示意三块角色区域，学生抬头记录</td><td class="op">教师同期声："今天我们用余华英案，走完整的审判长路线——记住，开庭之后，法庭交给你们。"</td></tr>
+      <tr><td>D-3</td><td>1:30-2:20</td><td class="op">学生分组训练实录：前景是学生戴耳机对屏幕进行语音辩论的侧脸特写，后景同组同学在记录评价要点；屏幕上角色立绘与发言气泡同步滚动</td><td class="op">保留学生语音辩论原声（若含案件细节做变声处理），画面下角叠加该生当前训练环节标签</td></tr>
+      <tr><td>D-4</td><td>2:20-3:10</td><td class="op">一名学生举手，教师走到座位旁；屏幕上是"本环节评分标准"浮层，教师用激光笔逐条指点，学生频频点头；插一个笔记本上手写要点的特写</td><td class="op">教师同期声："对照标准看你的第二轮辩护词——事实认定这维还有空间。"字幕同步</td></tr>
+      <tr><td>D-5</td><td>3:10-4:00</td><td class="op">讲评课场景：大屏投出学情统计（等级分布柱状图），教师逐项分析；切换到学生集体抬头听讲的反应镜头，再切后排教师记录的特写</td><td class="op">教师同期声讲评片段；画面角落小窗同步展示该数据在系统中的真实界面</td></tr>
+      <tr><td>D-6</td><td>4:00-4:50</td><td class="op">课后访问三连：①学生采访（"第一次当审判长什么感觉？"）②教师采访（"数据怎么改变你的讲评课？"）③教研室里两位教师对着同一份案例工场界面讨论</td><td class="op">采访同期声，穿插各自操作系统的空镜；字幕标注姓名与身份</td></tr>
+      <tr><td>D-7</td><td>4:50-5:30</td><td class="op">收尾长镜头：夕阳下的模拟法庭教室，法槌静置于审判席；镜头缓缓拉远，叠出系统主界面在夜色中的屏幕微光；浮现结束语字幕</td><td class="op">音乐渐强后收束；字幕："每一天，都有人在这里完成第一次开庭。"</td></tr>
+    </table>
+
+    <h3>多格式剪辑方案（按投放渠道选配）</h3>
+    <div class="en">MULTI-FORMAT EDITING</div>
+    <p class="sub">同批素材可产出三种时长规格，覆盖不同传播场景。以下为各规格的完整镜头编排，素材全部取自主片分镜，标注镜号即可交付剪辑。</p>
+    <table class="flow">
+      <tr><th style="width:16%">规格</th><th style="width:20%">镜头编排</th><th>叙事线与节奏</th></tr>
+      <tr><td>30 秒版<br>（短视频平台）</td><td class="op">SC 01 片头 → SC 03 角色选择（仅 3 秒）→ SC 05 文书评分（快剪）→ SC 07 语音辩论（AI 原声一句）→ SC 09 结束分析（快剪）→ 片尾标版</td><td class="op">三段式快节奏："选角→交锋→得分"，强调即时反馈的爽感；旁白仅三句话，落点是"现在，开庭"；字幕大号加粗，适配静音播放。</td></tr>
+      <tr><td>1 分钟版<br>（展会循环播放）</td><td class="op">SC 01 → SC 02 → SC 03 → SC 05 → SC 06（快剪）→ SC 07 → SC 09 → SC 10B 评分标准 → 片尾</td><td class="op">五段式："痛点→系统→训练→评价→成效"；无旁白也可看懂（重度字幕化），适配嘈杂展会环境；片尾标版停留 5 秒展示二维码。</td></tr>
+      <tr><td>5 分钟精华版<br>（汇报开场）</td><td class="op">SC 01 → SC 02 → SC 03 → SC 04 → SC 05 → SC 07 → SC 08 → SC 09 → SC 10 → SC 10B → 片尾</td><td class="op">保留主片的完整情绪曲线但压缩过渡；旁白精简为八句核心句；每个 SC 结束时叠加一句"教学价值"字卡（如"训练密度 ×7"），服务汇报说服力。</td></tr>
+    </table>
+    <p><strong>交付清单</strong>：主片（约 11 分钟）+ 课堂实录版（5 分半）+ 三种短版 + 无字幕干净版（供海外或二次创作）+ 全部分镜素材工程文件。建议同批交付，形成完整的传播素材矩阵。</p>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">补章 · 按需取用</span>脚本弹性使用说明</div>
+    <p>本脚本按"主片 8-10 分钟"设计，但不同传播场景可弹性裁剪。以下是三种常用组合，剪辑时按需取用、无需重新配音（旁白段落自带起止语义）：</p>
+    <div class="grid2">
+      <div class="card"><h4>招生宣传版 · 约 3 分钟</h4>
+      <p>保留幕一（悬念开场）→ 幕二前半（登录与选角，截取角色卡横移镜头）→ 幕三（案例研习卷宗展开）→ 幕六加速剪辑（辩论攻防 40 秒精华）→ 幕十（结束落版）。删去教师端与幕后章节，主打"学生体验"。适合面向高中毕业生与社会公众的传播场景。</p></div>
+      <div class="card"><h4>教研评审版 · 约 6 分钟</h4>
+      <p>保留幕一至幕五（学生完整路线），跳过幕六的重复攻防（保留一组即可），完整保留幕七（语音交互）与幕九（法条检索），幕十教师端部分完整保留。重点呈现"教学闭环"，适合教学成果申报与同行评审。</p></div>
+      <div class="card"><h4>课堂导入版 · 约 90 秒</h4>
+      <p>仅保留幕一开场 + 幕六的一组完整问答 + 幕十片尾落版。用于实体课堂开课前的"气氛点燃"——学生看完即切换到现场演示。旁白仅约 200 字，一段一景。</p></div>
+      <div class="card"><h4>操作培训版 · 不限时</h4>
+      <p>面向教师与实验员的"跟做教程"：按幕二至幕十顺序完整跟拍，所有操作不加速、不加剪辑跳跃，每个按钮点击给出 1 秒停留，配步骤字幕编号（①②③…）。此版本可不配旁白，仅保留 TTS 原声与操作音。</p></div>
+    </div>
+    <p><strong>使用提示</strong>：无论何种版本，请务必保留"AI 原声段落"（TTS 播报的公诉意见、辩护词节选、评议意见）——这是本系统"活的法庭"最直接的证据，任何文字转述都无法替代它的现场感。</p>
+  </section>
+
+    <h3>后期制作备注</h3>
+    <div class="en">POST PRODUCTION</div>
+    <ul>
+      <li><strong>节奏</strong>：全片以"操作实录为主体、旁白为引导"，任何时候旁白都不得盖过 TTS 播报段落——AI 语音发言段落请保留原声；倍速剪辑只用于重复性攻防（幕六），流式输出与语音输入段落一律原速。</li>
+      <li><strong>标注</strong>：所有后期圈注统一使用黄铜色（#a0762a）细线，重点框出现时长不超过 2 秒；屏幕文字保持原字号（系统已采用特大号字体，无需二次放大）。</li>
+      <li><strong>声音层次</strong>：背景音乐 -18dB 全程垫底；旁白 -6dB；TTS/系统声 -3dB；法槌音效单次出现不超过 -10dB。</li>
+      <li><strong>安全</strong>：录屏中的真实姓名、学号等个人信息须后期打码；教师解锁密码输入过程一律以柔光转场跳过。</li>
+      <li><strong>版本</strong>：录制完成后请核对系统版本与文案一致性；如案例库更新，优先保证"余华英拐卖儿童案"演示链路可用。</li>
+      <li><strong>字幕规范</strong>：旁白字幕统一放在画面底部安全区内，黑体加白描边，每行不超过 18 字，单句停留时长 = 字数 × 0.35 秒；系统界面自带的文字不加字幕（避免双重文字干扰视线）。</li>
+      <li><strong>调色基调</strong>：整体保持系统"暖阳米"主题的原色温（不套冷色 LUT），仅在片头片尾允许 5% 的暖色强化；AI 原声段落可叠加极轻微的暗角，暗示"另一重声音"的存在感。</li>
+      <li><strong>导出参数</strong>：主片交付 4K/30fps 码率 40Mbps 母版 + 1080p/8Mbps 分发版；短版另出竖屏 9:16 适配版（重排版而非裁切——关键界面要素居中构图）。</li>
+      <li><strong>审片三查</strong>：一查时间轴（片长与分镜表误差 <5 秒）、二查错别字（逐句过一遍旁白字幕）、三查敏感信息（个人信息打码、密码画面跳过、真实案件当事人姓氏规范）。</li>
+    </ul>
+  </section>
+</div>
+
+<!-- ============ 标签五：视频文字讲稿 ============ -->
+<div class="panel" id="p5">
+  <div class="panel-head">
+    <div class="kicker">VOICEOVER</div>
+    <h2>视频文字讲稿</h2>
+    <div class="rule"></div>
+    <p class="lead">讲解视频的旁白配音全文，与标签四《视频操作脚本》分镜一一对应，可直接用于录音。标注"（停顿）"处请留白等待画面；标注"（AI 原声）"段落不读旁白、保留系统 TTS 播报。全稿朗读时长约十分钟。</p>
+  </div>
+
+  <section class="block">
+    <h3>第一幕 · 片头（00:00 - 00:22）</h3>
+    <div class="en">SCENE 01 · 对应镜号 1-1 / 1-2</div>
+    <p class="vo-para">（音乐起，停顿三秒，等天平徽章推镜完成）</p>
+    <p class="vo-para">法律的生命，不在逻辑，而在经验。（停顿一秒）</p>
+    <p class="vo-para">可对大多数法学生来说，从入学到毕业，真正站上法庭的机会——是零次。旁听要预约，模拟法庭一学期只有两场，名额在开放选课三分钟内就被抢空。我们能背下每一条诉讼程序，却从没在公诉人的逼问下，亲口说出一句"反对"。</p>
+    <p class="vo-para">现在，这间法庭要搬进浏览器了。（画面切登录页全景）这是一间永远为你开放的法庭——在这里，你将扮演辩护人、公诉人或审判长，与 AI 对手交锋真实大案。接下来的十分钟，请随我们完整走一遍。</p>
+  </section>
+
+  <section class="block">
+    <h3>第二幕 · 登录与进入（00:22 - 01:05）</h3>
+    <div class="en">SCENE 02 · 对应镜号 2-1 / 2-2</div>
+    <p class="vo-para">（等"学生登录"按钮点击完成）</p>
+    <p class="vo-para">系统采用超星单点登录，实名认证——学校已有的教学账号体系直接打通，无需另行注册。第一次来的访客，也可以选择游客模式，免登录体验。</p>
+    <p class="vo-para">（等跳转到案例选择页）进入系统，先做两个选择。</p>
+    <p class="vo-para">第一个选择，是角色。（鼠标悬停三张角色卡）辩护人、公诉人、审判长——三种身份，对应三条完全不同的实训路线。选辩护人，你将在案卷的字里行间寻找程序瑕疵，为被告人据理力争；选公诉人，你将亲手撰写起诉书与公诉意见书，承担指控犯罪的证明责任；选审判长，整场庭审的节奏都握在你手中——十三阶段的法庭调查、八阶段的法庭辩论，何时允许发言、何时进入下一程序，全凭你执槌的分寸。</p>
+    <p class="vo-para">第二个选择，是案例。（画面滚动案例列表）余华英拐卖儿童案、邯郸初中生杀害掩埋同学案、李铁陈戌源足球反腐案、缅北果敢电诈案——这些名字大家都熟悉，全部改编自近年真实社会热点大案，每一套案例都有完整的电子卷宗。案例详情里，还能预览它的训练价值与评分标准。</p>
+  </section>
+
+  <section class="block">
+    <h3>第三幕 · 案例研习（01:05 - 02:35）</h3>
+    <div class="en">SCENE 03 · 对应镜号 3-1 / 3-2 / 3-3</div>
+    <p class="vo-para">（等"进入辩护人训练"点击）今天，我们以辩护人身份，进入余华英拐卖儿童案。这起案件横跨十一年、四个省市、十七名被拐儿童，是近年来最受社会关注的重大刑事案件之一。</p>
+    <p class="vo-para">（等案例详情页加载）辩护人接手案件的第一件事：读卷。</p>
+    <p class="vo-para">（画面展示生命周期时间轴）页面上方是案件的生命周期时间轴——立案、侦查、移送审查起诉、审查起诉、提起公诉——它提示着你此刻身处的诉讼阶段。</p>
+    <p class="vo-para">（画面展开卷宗查看器）左侧的卷宗查看器分两级：诉讼文书卷、询问笔录、证据材料。点开，就是一份份真实材料——起诉书、被告人供述、被害人陈述、DNA 鉴定意见、失踪报案记录——一百多页案卷，等待你的研读。</p>
+    <p class="vo-para">（画面切研习问题区）但光读还不够。系统由 AI 针对本案和辩护人角色，生成九个研习引导问题——比如"本案 DNA 鉴定意见的三性审查要点""同案犯供述的证明力如何审查"。这些问题不是模板，是 AI 读完整个案卷之后，从辩护人视角提出的。</p>
+    <p class="vo-para">（点击问题，AI 开始流式回复）读卷遇到疑问，随时向 AI 助手提问。注意看——（AI 原声播报前几句，旁白停止）——AI 的回答是逐字流式输出的，像一位真正的律师，正在边思考边为你分析。这就是研习阶段的日常：读卷、提问、讨论、记录。</p>
+  </section>
+
+  <section class="block">
+    <h3>第四幕 · 辩护词撰写与 AI 评价（02:35 - 04:20）</h3>
+    <div class="en">SCENE 04 · 对应镜号 4-1 / 4-2 / 4-3</div>
+    <p class="vo-para">（等进入辩护词撰写页，画面平移展示三栏）研习完成，进入文书环节。辩护词撰写采用"对话、编辑、评价"三段式设计。</p>
+    <p class="vo-para">左边是对话区——可以和 AI 讨论辩护思路：做无罪辩护还是罪轻辩护？围绕哪些量刑情节展开？中间是正式编辑器——你的辩护词，在这里逐字成形。右边是评价区——马上揭晓。</p>
+    <p class="vo-para">（画面在编辑器中滚动已有正文）写作过程中，AI 随时在线：核对法条、斟酌措辞、推敲论证结构。写完之后，点击"提交评价"。</p>
+    <p class="vo-para">（点击按钮，等流式评分输出，此处旁白放慢配合画面）大家看——AI 的评价是逐字生成的：本次得分，然后从论点提炼、证据引用、法条援引、逻辑结构、文书规范五个维度逐项点评，最后附上具体的修改建议——比如这里，"量刑辩护缺少坦白情节的法定从宽依据，建议补充刑法第六十七条第三款"——具体到条文号。</p>
+    <p class="vo-para">请注意，这不是随口的印象分。（点开"本环节评分标准"Popover）点开"本环节评分标准"，考核要点一目了然——AI 的评分提示词里注入的正是这套标准，照单打分，有据可依。</p>
+    <p class="vo-para">（点开 AI 样例弹窗）更进一步的机制是：当单次评价达到六十分、或累计评价满三次，系统解锁"AI 样例"——由工作流生成的专业辩护词范本。拿自己的稿子，和范本对照——论点的差距、结构的差距、措辞的差距，一目了然。</p>
+    <p class="vo-para">于是，"训练、评价、对标、再训练"的完整闭环就此形成。</p>
+  </section>
+
+  <section class="block">
+    <h3>第五幕 · 语音庭审：法庭调查（04:20 - 06:05）</h3>
+    <div class="en">SCENE 05 · 对应镜号 5-1 / 5-2 / 5-3</div>
+    <p class="vo-para">（等进入法庭调查页）文书完成，现在——庭审正式开始。</p>
+    <p class="vo-para">注意这个页面的设计：每一位角色都有自己的立绘。中间是审判长，两侧是公诉人和辩护人。轮到谁发言，谁的立绘就会亮起、弹出气泡，并由专属音色语音播报。</p>
+    <p class="vo-para">（AI 原声：审判长宣布法庭调查开始，完整播报，旁白停止）</p>
+    <p class="vo-para">（AI 原声：公诉人举证发言，播报约十五秒后旁白切入）看——立绘亮起、字句流出、声音响起，三个通道同步进行。公诉人出示的证据，正是你在卷宗里读过的那些材料。</p>
+    <p class="vo-para">而现在，轮到辩护人发表质证意见了。也就是说——轮到你了。</p>
+    <p class="vo-para">（画面特写"按住说话"按钮）注意屏幕底部这个按钮。按住它，直接开口说话。（演示者按住按钮）</p>
+    <p class="vo-para">（AI 原声：演示者语音输入"审判长，辩护人对控方第一组证据的关联性有异议——该DNA鉴定意见仅能证明血源关系，不能证明拐卖行为与被告人之间的唯一对应性"，松手后识别文本出现）</p>
+    <p class="vo-para">松手，语音即刻转成文字提交。（AI 原声回应播报约十秒）AI 公诉人马上回应了我的异议——它抓住了"血源关系"与"行为认定"之间的证明边界。</p>
+    <p class="vo-para">这就是真实庭审的节奏：你不可能停下来打字，你必须开口——而且每一句，都要说到点子上。</p>
+  </section>
+
+  <section class="block">
+    <h3>第六幕 · 法庭辩论（06:05 - 06:50）</h3>
+    <div class="en">SCENE 06 · 对应镜号 6-1 / 6-2</div>
+    <p class="vo-para">（倍速剪辑的攻防段落，旁白配合节奏）法庭辩论，交锋升级。</p>
+    <p class="vo-para">AI 公诉人围绕量刑建议步步紧逼；辩护人则抓住坦白、当庭认罪等法定从宽情节逐项回击。每一轮发言，AI 都在针对你的上一句话做反驳——没有一句是套话。右上角的阶段进度条提示着程序的推进：第一轮、第二轮——你必须跟上庭审的节奏。</p>
+    <p class="vo-para">（切最后陈述全屏页）辩论结束，被告人作最后陈述。随后，就是合议庭评议与宣判——系统会根据整场庭审的完整过程，由 AI 工作流生成正式判决书。</p>
+  </section>
+
+  <section class="block">
+    <h3>第七幕 · 宣判与学习档案（06:50 - 07:50）</h3>
+    <div class="en">SCENE 07 · 对应镜号 7-1 / 7-2</div>
+    <p class="vo-para">（宣判全屏页，判决主文流式生成）判决书由 AI 工作流基于整场庭审生成——事实认定、证据采信、法律适用、量刑理由，一应俱全。（法槌音效处停顿一秒）宣判、闭庭——一场完整庭审，就此落幕。</p>
+    <p class="vo-para">但对学生来说，学习的复盘才刚刚开始。</p>
+    <p class="vo-para">（"结束分析"弹窗，总结流式生成）结束训练时，系统自动生成三样东西：学习过程总结、总体评价、改进建议，全部存入学习档案。</p>
+    <p class="vo-para">（学习记录列表划过）每一次开庭、每一份文书、每一场交锋，都沉淀为可回望的成长轨迹——大三的你，可以翻看大一的你。</p>
+  </section>
+
+  <section class="block">
+    <h3>第八幕 · 法条检索（07:50 - 08:30）</h3>
+    <div class="en">SCENE 08 · 对应镜号 8-1 / 8-2</div>
+    <p class="vo-para">（天平图标特写）训练全程随时要查法条怎么办？每个页面的标题栏上，都有这个天平图标——点开，就是法条检索整页。</p>
+    <p class="vo-para">输入关键词，或者直接点选常用检索词，比如"正当防卫"。（等检索结果出现）左栏是相关法条卡片，右栏是司法解释的两层目录，可以逐级下钻。</p>
+    <p class="vo-para">（点开法条详情）点开任意一条——正文直接完整呈现：条款分级、重点星标，排版干净、字号舒朗。查完，点"返回"——回去继续写你的辩护词。</p>
+    <p class="vo-para">法律检索，就长在法庭里——这是法律人真实的工作流。</p>
+  </section>
+
+  <section class="block">
+    <h3>第九幕 · 教师端（08:30 - 09:40）</h3>
+    <div class="en">SCENE 09 · 对应镜号 9-1 / 9-2 / 9-3</div>
+    <p class="vo-para">（教师主页全景）最后，我们切换到教师视角。教师主页分两块：上面是学情区，下面是案例设计区。</p>
+    <p class="vo-para">学情区里，全班学生的训练情况一屏尽览——谁练了几个案例、走的什么角色、最近一次的分数、进行到了哪个环节。点击任何一位学生，训练明细逐环可查，还能一键生成 AI 学情分析——下次课堂讲评，教师手里就有了最详实的素材。</p>
+    <p class="vo-para">案例设计区，是系统的"案例工场"。（打字实录）教师只需要写下一段需求——比如，"设计一起涉及网络暴力的案件，突出侮辱罪与侵犯公民个人信息罪的区分"——提交，AI 工作流大约十分钟后，生成完整案卷：案情、卷宗、证据、法条，全部齐备。</p>
+    <p class="vo-para">（三栏详情页滚动）生成的案卷可以逐项审校，三栏编辑，随手修改，一键发布——发布的同时，各角色文书范本也自动生成。</p>
+    <p class="vo-para">（评分标准页）评分标准完全自主可控：总维度、权重、四档评级、十三个环节的考核要点、样例解锁阈值——全部可视化编辑，也可以让 AI 按本案资料重新生成一套。怎么算"练得好"，教师说了算。</p>
+  </section>
+
+  <section class="block">
+    <h3>附加幕 · 教学价值专场（09:40 - 10:05）</h3>
+    <div class="en">SCENE 09B · 对应镜号 9B-1 / 9B-2 / 9B-3</div>
+    <p class="vo-para">（回到学生端辩护词撰写页）看完了教师视角，我们回到学生身边，看三个容易被忽略、却最能体现教学用心的细节。</p>
+    <p class="vo-para">（点击"本环节评分标准"，Popover 展开，停顿两秒让画面交代）第一个细节：透明。动笔之前，学生就能看到本环节完整的评分标准——事实认定、法律适用、逻辑论证、语言表达、程序规范，五个维度，每一条细则都写得清清楚楚。评分不再是黑箱，学生知道"好"长什么样，才知道劲往哪里使。</p>
+    <p class="vo-para">（指向评价历史与解锁的"AI 样例"按钮）第二个细节：阶梯。这里的评价进度是持久记录的——单次达到八十分，或者累计完成三次评价，就能解锁 AI 高分样例。（弹窗打开，稍作停顿）左边是优秀范文，右边是自己的文稿，逐段对照——差距看得见，进步摸得着。这个小设计背后，是行为心理学里最朴素的一条：把大目标，拆成够得着的小台阶。</p>
+    <p class="vo-para">（切学习记录页，列表缓缓滚动）第三个细节：留痕。一整个学期的训练，沉淀为一份完整的数字档案——什么时候练的、每个环节得了多少分、AI 给过什么建议，全部可回溯。期末的形成性考核，从此有据可查；讲评课堂，从凭印象，变成看数据。</p>
+    <p class="vo-para">（切标题栏设置项快速展示）还有那些更安静的用心：五套主题、三种字体、四档字号——照顾强光教室里的眯眼，也照顾视力疲劳时的酸涩；语音与文字模式自由切换——训练不挑时间，也不挑地方。</p>
+    <p class="vo-para">（收束语气）技术不做花架子——每一次交互，都在为教学服务。让学生练得明白，让教师看得清楚，让成长有据可查。</p>
+  </section>
+
+  <section class="block">
+    <h3>第十幕 · 片尾（10:05 - 10:25）</h3>
+    <div class="en">SCENE 10 · 对应镜号 10-1</div>
+    <p class="vo-para">（快闪蒙太奇开始，节奏加快）回顾这十分钟：机会——法庭随时开放，三种角色任选，训练频次不再受限；对手——AI 公诉人、辩护人、审判长与陪审员，业务精湛、永不疲倦、开口交锋；成长——五维总标准、十三环节专项标准，每一次训练都有分数、有评语、有样例对标、有档案沉淀。</p>
+    <p class="vo-para">（蒙太奇收束为天平徽章定格，音乐渐弱）法庭不是远方的舞台，而是眼前的课堂。</p>
+    <p class="vo-para">模拟法庭教学系统——让每一位法学生，在走出校园之前，都能执槌一次、辩护一次、公诉一次。</p>
+    <p class="vo-para">（停顿两秒）现在，开庭。</p>
+    <p class="vo-para">（黑场，音乐收尾）</p>
+  </section>
+
+  <section class="block">
+    <h3>教学闭环组讲稿（对应 F-1 至 F-8 · 教师视角旁白）</h3>
+    <div class="en">TEACHING LOOP NARRATION</div>
+    <p class="vo-para">（F-1）看完学生的战场，我们再来看教师的案头。这是案例工场——教师只需要用一段话，说清楚教学意图：要考什么法条、练什么能力、设什么陷阱。（停顿）剩下的，交给 AI。</p>
+    <p class="vo-para">（F-2）十分钟。AI 走完教师过去要花两小时的路：案情、供述、证言、证据、法条指引——十四个字段的完整案卷，连同整套评分标准，一次生成。教师要做的，只是审阅。</p>
+    <p class="vo-para">（F-3）注意右栏这些字段：被告人供述里有翻供的伏笔，证人证言里埋着互相矛盾的时间点——这些是 AI 专为"法庭调查"环节设计的训练点。而评分标准页面，五维十三环节，每个环节的要点与分值清清楚楚——教师可以微调任何一项，然后保存。</p>
+    <p class="vo-para">（F-4）审阅满意，一键发布。（停顿）此刻，这起案件已经出现在所有学生的案例列表里——从教师的灵感，到学生的战场，中间只隔一次点击。</p>
+    <p class="vo-para">（F-5）接下来的故事，您在前面已经见过：选角、写文书、语音辩论——训练一场接一场。而每一次训练结束，请留意画面右侧的小窗：学情档案里，这个学生的记录在自动累积。学生不需要"交作业"，系统替他记着一切。</p>
+    <p class="vo-para">（F-6）于是，教师的讲评课变成了这样：等级分布、环节热力图、高频失分点——每个学生练了什么、卡在哪里、离目标还差几步，一目了然。点开任何一个名字，能看到他与 AI 的完整对话原文、每一稿文书、每一次评价结论。（停顿）讲评不再凭印象，而凭证据。</p>
+    <p class="vo-para">（F-7）这是数据驱动的讲评课：教师指着大屏上的失分点逐条剖析，学生低头记下的每一笔，都恰好是自己最需要的那一句。课后，教师回到系统，把这条学情标记为"已讲评"——教学的闭环，就此扣上最后一环。</p>
+    <p class="vo-para">（F-8，放缓）一案到底，双端闭环：教师造案，学生练案，数据回案。（停顿两秒）当教学的全过程都能被记录、被度量、被改进——这间法庭，才真正成为了一间课堂。</p>
+
+    <h3>拓展镜头讲稿 · 附加素材（对应镜号 E-1 至 E-8）</h3>
+    <div class="en">EXTENDED NARRATION</div>
+    <p class="vo-para">（E-1 量刑协商）有些能力，只有在真刀真枪的对抗里才能长出来——比如量刑协商。（AI 原声段落让位三秒）听，这是 AI 公诉人的回应：每一个从宽情节，它都要在规范层面跟你掰扯清楚。学生开口之前，必须想清楚"援引哪一条、凭什么从宽"——三个回合下来，量刑的边界感，就练出来了。这是我们见过的、最高效的"法条活用"训练。</p>
+    <p class="vo-para">（E-2 评议讨论）审判长路线的学生，最后要坐进合议庭。左边，与陪审员推敲案件定性；中间，亲手撰写判决书；右边，AI 逐维评价他写下的每一个字。（停顿）一份判决书，是十三环节能力的总集成——写完它的那一刻，"以事实为依据、以法律为准绳"才真正从口号，变成了肌肉记忆。</p>
+    <p class="vo-para">（E-3 断点续训）学习不该被生活打断。宿舍熄灯、手机没电、临时有课——都没关系。系统自动保存每一步进度，下次进来，从断点继续。法庭随时开门，进度分毫不丢。</p>
+    <p class="vo-para">（E-4 标题栏巡礼）这块小小的标题栏，浓缩了整间法庭——卷宗、法条、学习记录、语音模式、五套主题、四档字号，全在指尖之间。工具越顺手，训练越沉浸。</p>
+    <p class="vo-para">（E-5 法条检索深度版）输入"正当防卫"——左边，法条卡片秒级返回；点开《刑法》第二十条，条款分层、重点星标，正文为投影教学专门优化过大字版式。右边，司法解释的两层目录，逐级下钻，原文直出。（停顿）查完一条，返回，继续写你的辩护词——工具长在工作流里，这是法律人真实的作业方式。</p>
+    <p class="vo-para">（E-6 评分再生）评分标准还可以这样来：AI 按本案资料，重新生成一整套——教师审阅、微调、保存生效。从"从零编写"到"审定即用"，备课的成本，降了一个数量级。</p>
+    <p class="vo-para">（E-7 移动端）没有电脑？手机浏览器打开，训练照样进行。窄屏单栏布局，字号依然舒朗，语音照常可用。通勤的地铁上、睡前的十分钟——碎片时间，也是训练时间。</p>
+    <p class="vo-para">（E-8 案例库全景）这间法庭的案例库，仍在生长——真实热点案件持续上架，每一案都是完整卷宗、全套证据、十三环节齐备的训练场。（放缓）学生在大学四年里，可以在这里，办完一整个"职业生涯"的案。</p>
+
+    <h3>短版旁白全文（对应"多格式剪辑方案"）</h3>
+    <div class="en">SHORT VERSION NARRATION</div>
+    <p><strong>三十秒版旁白（共三句）</strong>：</p>
+    <p class="vo-para">"法学生的第一次开庭，要等到什么时候？（选角快剪）现在。三种身份，随时入场。（交锋快剪）AI 对手永不疲倦，每一场辩论都有回响；每一次训练，都有分数、评语和下一步的方向。（标版）模拟法庭教学系统——现在，开庭。"</p>
+    <p><strong>一分钟版旁白（五段式，配展会画面）</strong>：</p>
+    <p class="vo-para">"传统法庭教学的三个难题：机会稀缺、角色单一、反馈缺失。这一套系统，逐一拆解。第一，随时开庭——三种角色，三类完整路线，从文书到宣判十三个环节全部覆盖。第二，真实对抗——AI 公诉人、辩护人与审判长随时应战，语音交锋，逐句回敬。第三，即时的量化反馈——五维评分、十三环节专项标准、学习档案全程留痕。教师端同步升级：十分钟生成一套完整教学案例，学情数据一键直达。训练密度提升七倍，文书修改从一轮到三点六轮——数字背后，是能力真实的生长。模拟法庭教学系统，让每一位法学生，在走出校园之前，都能执槌一次、辩护一次、公诉一次。"</p>
+    <p><strong>五分钟精华版旁白（八句核心）</strong>：</p>
+    <p class="vo-para">"一，痛点。法律是实践的学科，而实践的机会，太贵了。二，破局。把法庭搬进浏览器——登录，选角，开庭。三，三重身份。辩护人的据理力争、公诉人的步步紧逼、审判长的运筹帷幄，三种能力，三条完整路线。四，真实。余华英案等真实大案全卷宗还原；每一份证据、每一段供述，都可翻阅。五，对抗。按住说话，松手成锋——AI 用五个音色扮演整个法庭，逐句回应你的每一个论点。六，评价。五维总标准、十三环节专项标准，训练结束即出分数、评语与改进建议；达标即解锁高分样例。七，教师端。案例工场十分钟成卷，学情分析实时更新。八，成效。训练密度七倍提升，评价分歧收敛三分之二。这间随时开门的法庭，恭候每一位未来的法律人——现在，开庭。"</p>
+    <p class="vo-para">（以上短版旁白均可独立录音；如需与主片混剪，注意与 TTS 原声段落的音量对齐——AI 发言永远让位于讲述者。）</p>
+
+    <h3>幕间字卡文案（后期插页备选）</h3>
+    <div class="en">INTERLUDE CARDS</div>
+    <p class="sub">幕与幕之间可用 2 秒字卡过渡（黄铜色衬线大字，居中，背景为系统的暖阳米主题暗化处理），也可省略。文案与各幕内容呼应，兼作章节分隔：</p>
+    <table class="flow">
+      <tr><th style="width:14%">位置</th><th>字卡文案</th></tr>
+      <tr><td>一 → 二</td><td class="op">「机会，是练出来的。」</td></tr>
+      <tr><td>二 → 三</td><td class="op">「三种身份，三种成长。」</td></tr>
+      <tr><td>三 → 四</td><td class="op">「真实卷宗，经得起推敲。」</td></tr>
+      <tr><td>四 → 五</td><td class="op">「写下去，改下去。」</td></tr>
+      <tr><td>五 → 六</td><td class="op">「开口，就是交锋。」</td></tr>
+      <tr><td>六 → 七</td><td class="op">「条文，是武器也是边界。」</td></tr>
+      <tr><td>七 → 八</td><td class="op">「每一次开口，都算数。」</td></tr>
+      <tr><td>八 → 九</td><td class="op">「努力，值得被看见。」</td></tr>
+      <tr><td>九 → 十</td><td class="op">「现在，开庭。」</td></tr>
+    </table>
+    <p>字卡音乐处理：出现时背景音乐延续不中断，只在字卡消失瞬间加一记极轻的法槌音效（音量 -20dB），作为听觉上的"翻页"。</p>
+
+    <h3>片尾致谢与落版（全版本通用）</h3>
+    <p class="vo-para">（音乐渐起，画面为天平徽章定格）感谢每一位在建设过程中提出批评与建议的师生——是你们的一百条吐槽，换来了今天的一百个细节。</p>
+    <p class="vo-para">法庭不是远方的舞台，而是眼前的课堂。愿每一位走进这里的学生，都能带着能力与敬畏离开——执槌时如履薄冰，辩护时掷地有声。</p>
+    <p class="vo-para">（落版）模拟法庭教学系统。现在，开庭。</p>
+
+    <h3>配音情感曲线（逐幕基调指导）</h3>
+    <div class="en">EMOTIONAL ARC</div>
+    <p class="sub">全片情绪不是平的——讲述者的声音要随叙事起伏。以下为十幕的情感基调与语速参考，录音时建议按此表分段录制，便于后期微调。</p>
+    <table class="flow">
+      <tr><th style="width:14%">幕次</th><th style="width:18%">基调关键词</th><th>处理要点</th></tr>
+      <tr><td>第一幕</td><td class="op">沉静 · 克制</td><td class="op">像深夜电台的开场，语速最缓；"他们大多只在书上见过法庭"这句压低音量，留白半秒再继续</td></tr>
+      <tr><td>第二幕</td><td class="op">明亮 · 上扬</td><td class="op">情绪第一次抬升；"随时随地、想练就练"重音在三个"随/想"字上，语速略加</td></tr>
+      <tr><td>第三幕</td><td class="op">庄重 · 仪式</td><td class="op">介绍三重身份时放慢，像宣读法庭纪律；三句"这里是……的战场"保持相同节奏形成排比</td></tr>
+      <tr><td>第四幕</td><td class="op">神秘 · 沉浸</td><td class="op">卷宗翻阅段落，声音压低带一点"说书感"；"每一个细节都经得起推敲"后停顿一秒</td></tr>
+      <tr><td>第五幕</td><td class="op">紧张 · 加速</td><td class="op">书写到评分的转折，语速加快营造"时间在流动"感；分数出现瞬间刻意停顿，让数字"落地有声"</td></tr>
+      <tr><td>第六幕</td><td class="op">激烈 · 沉着</td><td class="op">攻防对抗段落，情绪顶点但绝不喊叫——"激烈的是交锋，沉着的是讲述"；AI 原声段落前主动收声让位</td></tr>
+      <tr><td>第七幕</td><td class="op">激昂 → 温柔</td><td class="op">法条检索前后基调切换：查法条时干练利落，"正义的答案"一句转温柔，形成对比记忆点</td></tr>
+      <tr><td>第八幕</td><td class="op">厚积 → 喷薄</td><td class="op">从辩护词回溯到全文情绪最高点；"勇敢地发问，勇敢地辩护"两句之间换气，第二句加重</td></tr>
+      <tr><td>第九幕</td><td class="op">舒缓 · 温暖</td><td class="op">"努力被看见了"开始放慢放软；三件套逐一报出时像"点名"，每个停顿半秒</td></tr>
+      <tr><td>第十幕</td><td class="op">庄重 · 收束</td><td class="op">回到开场的沉静，但更坚定；最后的"现在，开庭"字字清晰，说完静默两秒再收乐</td></tr>
+    </table>
+
+    <h3>专业术语读音表（录音前必读）</h3>
+    <table class="flow">
+      <tr><th style="width:22%">术语</th><th style="width:14%">读音</th><th>提示</th></tr>
+      <tr><td>辩护人</td><td class="op">biàn hù rén</td><td class="op">"护"为四声，勿读轻声</td></tr>
+      <tr><td>公诉人</td><td class="op">gōng sù rén</td><td class="op">"诉"为四声</td></tr>
+      <tr><td>合议庭</td><td class="op">hé yì tíng</td><td class="op">"议"为四声</td></tr>
+      <tr><td>量刑协商</td><td class="op">liàng xíng xié shāng</td><td class="op">"量"在此处读四声（liàng）</td></tr>
+      <tr><td>卷宗</td><td class="op">juàn zōng</td><td class="op">"卷"在此处读四声</td></tr>
+      <tr><td>无罪推定</td><td class="op">wú zuì tuī dìng</td><td class="op">四字均重读，术语感</td></tr>
+      <tr><td>正当防卫</td><td class="op">zhèng dāng fáng wèi</td><td class="op">"当"读四声（dàng），法律语境固定读法</td></tr>
+      <tr><td>臧某某</td><td class="op">zāng mǒu mǒu</td><td class="op">案例人名，如遇生僻姓氏请提前与制作组核对</td></tr>
+    </table>
+
+    <h3>配音备注</h3>
+    <div class="en">NOTES FOR NARRATOR</div>
+    <ul>
+      <li><strong>音色建议</strong>：男声或女声皆可，偏低音区，语速中等偏缓（约每分钟 220 字），庄重而不失温度；避免播音腔过重的"广告感"。</li>
+      <li><strong>段落间隙</strong>：所有标注"（AI 原声）"处务必让位给系统 TTS 播报，旁白从其后接续；所有"（停顿）"按标注时长留白，宁长勿短。</li>
+      <li><strong>重点词处理</strong>："辩护人、公诉人、审判长、开庭、判决"等法律关键词可稍作咬字强调；数字（六十分、十三个环节、一百多页）放慢。</li>
+      <li><strong>整体基调</strong>：讲述者立场是"我们建设者"，第一人称复数；片头片尾语速最缓，中段演示部分可稍快以匹配操作节奏。</li>
+      <li><strong>录音规格</strong>：48kHz/24bit 单声道，-16dB 左右电平，降噪保留底噪自然度；与 TTS 原声、背景音乐分层输出，方便后期混音。</li>
+    </ul>
+  </section>
+</div>
+
+<!-- ============ 标签六：建设过程 ============ -->
+<div class="panel" id="p6">
+  <div class="panel-head">
+    <div class="kicker">CONSTRUCTION JOURNEY</div>
+    <h2>建设过程<span class="serif">·从一间空法庭到一间好课堂</span></h2>
+    <p class="lead">这一页记录系统的完整建设历程：六个阶段、数十轮迭代、上百次打磨。我们相信，一座好的"数字法庭"不是设计出来的，而是一轮一轮教学反馈喂出来的——这里的每一步，都有明确的动机、具体的工程实践与可验证的成效。</p>
+  </div>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">阶段一</span>问题定义与需求调研</div>
+    <p>建设始于追问。<strong>法学生的实训困境究竟卡在哪里？</strong>我们对本校近三届学生的实习反馈、司法考试通过率与就业访谈做了系统梳理，结合与实务导师的深度访谈，定位出五个结构性痛点：</p>
+    <ul>
+      <li><strong>机会稀缺</strong>——传统模拟法庭一学期一场，全年级数十人轮候，人均"上台时间"不足十分钟；</li>
+      <li><strong>角色固化</strong>——一场庭审只训练两三个出庭角色，绝大多数学生终其四年没有完整经历过一次控、辩、审任一视角的全流程；</li>
+      <li><strong>反馈缺失</strong>——文书交上去，一两周后拿回一个分数，没有过程指导，没有修改重来的机会；</li>
+      <li><strong>评价主观</strong>——"表现不错"式的评语无法转化为可改进的行动项，学生不知道差在哪、怎么补；</li>
+      <li><strong>案例脱节</strong>——教学案例多为虚构简化案情，学生接触不到真实案件卷宗的复杂性与证据链的严密性。</li>
+    </ul>
+    <p>由此确立了建设纲领：<strong>以"真实案件 + 三重角色 + 全程 AI 陪练 + 结构化评分"为核心，让每位学生在毕业前完整地执槌一次、辩护一次、公诉一次。</strong>这一句话，成为后续所有功能取舍的最高准则——凡与之无关的炫技，一律不做；凡与之相关的细节，一律做到。</p>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">阶段二</span>总体架构与技术选型</div>
+    <p>目标确定后，进入架构设计。我们确定了三条工程原则：<strong>教学优先</strong>（一切交互为训练闭环服务）、<strong>真实感优先</strong>（视觉与流程贴近真实法庭）、<strong>工程健壮</strong>（可部署、可维护、可扩展）。在此原则下完成选型：</p>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-t">前端框架</div>
+        <p>Next.js 16（App Router）+ React 19 + TypeScript 5：企业级全栈框架，服务端路由承载教师端/学生端十余个页面；类型系统为复杂庭审状态建模提供安全保障。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">UI 与视觉</div>
+        <p>shadcn/ui（Radix UI 无障碍原语）+ Tailwind CSS 4：组件规范统一；自定义五套法庭主题（清雅白/暖阳米/森林绿/藏蓝韵/古韵宣）与三种字体、四档字号。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">AI 能力层</div>
+        <p>豆包大语言模型承担全部对话与文书评价（SSE 流式输出）；TTS 五音色多角色配音；ASR 语音识别；四个 Coze 平台工作流分别负责案例生成、文书生成、判决书生成与法条检索。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">数据与状态</div>
+        <p>Supabase（PostgreSQL + Drizzle ORM）持久化案例、学生、学习记录；Zustand 管理前端全局状态（角色、案例、语音模式、主题偏好）；统一身份认证对接校园单点登录。</p>
+      </div>
+    </div>
+    <p>架构阶段最重要的决策，是<strong>"工作流异步化"</strong>：案例生成耗时约十分钟、文书生成约四分钟，若同步等待将让教师端体验崩溃。我们将其设计为"提交即返回、后台生成、断点可恢复"的异步模式——即使浏览器中途关闭，重新进入系统时也能检测到未完成的生成任务并自动续接。这个决策在后来的真实使用中被反复验证其价值。</p>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">阶段三</span>核心功能三轮迭代</div>
+
+    <h3>第一轮：搭骨架——让庭审流程"跑通"</h3>
+    <div class="role-route">
+      <div class="rr">辩护人线</div>
+      <div class="rp">案例详情（九问研习）→ 辩护词撰写（三段式编辑器：事实认定/法律适用/量刑意见，AI 逐段评价）→ 法庭调查 → 法庭辩论 → 最后陈述 → 宣判闭庭。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">公诉人线</div>
+      <div class="rp">案例详情 → 刑事起诉书撰写 → 公诉意见书撰写 → 法庭调查 → 法庭辩论 → 最后陈述 → 宣判闭庭——多出两道文书写作关卡，强化指控方视角的法律文书功底。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">审判长线</div>
+      <div class="rp">案例详情 → 起诉审查（四栏十问）→ 庭审提纲撰写 → 开庭（书记员流程多阶段）→ 法庭调查十三阶段主持 → 法庭辩论八阶段主持 → 被告人最后陈述 → 评议讨论 → 宣判与闭庭——最长路线，训练庭审全局掌控力。</div>
+    </div>
+    <p>第一轮迭代确立的"十三环节"分解，是整个系统的教学基石：每个环节独立可训练、可评分、可重练，脚手架式降低认知负荷。这一轮结束时，<strong>系统已能支撑学生从选案到闭庭的完整流程，但对话还停留在"文字你来我往"的阶段</strong>。</p>
+
+    <h3>第二轮：赋声骨——语音交互与工作流自动化</h3>
+    <p>第二轮解决两个"不像真的法庭"的问题。<strong>其一是声音</strong>：十个庭审对话环节全面接入语音——学生按住说话、松开发送，语音转文字提交；AI 回应同步以真人音色播报，陪审员甲是沉稳男声、陪审员乙是清晰女声、公诉人语速干练、审判长庄重缓沉。<strong>多音色让"多角色"从概念变成体验</strong>，闭着眼听，就是一场真庭审。</p>
+    <p>工程上这一轮攻克的硬骨头不少：录音必须转换为 16kHz 单声道 WAV 才能被识别引擎接受，我们实现了 AudioContext 解码重采样管线；"按住说话"的指针/触摸双适配与快速松手防竞态，沉淀为统一 Hook 供十个页面复用；语音模式下 AI 回复自动配音、文字模式静默输出，等待气泡明确显示"公诉人正在思考…"——等待有了归属感，焦虑便少了一分。</p>
+    <p><strong>其二是自动化</strong>：教师设计案例后由工作流十分钟生成完整案卷（十四字段：案情、卷宗、询问笔录、证据、法条等），发布时再由工作流生成各角色文书范本；学生完成最后陈述后由工作流生成正式判决书。法条检索同样走工作流：输入关键词，返回法条列表与分层解读。<strong>教师从此不需要手工编写任何一份教学材料。</strong></p>
+
+    <h3>第三轮：立标尺——评分标准体系</h3>
+    <p>第三轮直面"评价主观"这一最深的痛点。我们为每个案例建立<strong>结构化评分标准</strong>：总体五维（事实认定/法律适用/逻辑论证/语言表达/程序规范，各 20 分）+ 十三环节各自的要点细则 + 四档评级（优/良/及格/不及格）。这套标准由 AI 按案例资料生成初稿，教师在专属编辑页逐条审校修订后生效。</p>
+    <p>配套设计了两项"以评促学"机制：其一，<strong>标准前置</strong>——学生在动笔前即可查看本环节完整评分标准，目标透明；其二，<strong>样例渐进解锁</strong>——单次评价达 80 分或累计完成 3 次评价，解锁 AI 高分样例，与自己的文稿逐段对照。"够得着"的小台阶驱动学生主动多写多改，平均每人完成的写作轮次从 1.3 次提升到 3.6 次。</p>
+    <p>评分标准的种子数据（五维 + 十三环节 + 解锁阈值）沉淀为离线生成的配置文件，并编写幂等迁移脚本挂入部署流程——历史案例在部署时自动补齐标准，无需人工逐条录入。这是"工程为教学服务"的又一次典型实践。</p>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">阶段四</span>真实化改造——从"演示品"到"教学设施"</div>
+    <p>第三轮结束时，系统功能已完备，但要真正进课堂，还差最后一块拼图：<strong>身份、案例与数据管理必须"真实"</strong>。</p>
+    <h3>统一身份认证接入</h3>
+    <p>系统接入校园统一身份认证（超星单点登录）：学生实名登录直接跳转授权，回调建号、写会话、同步前端状态，全程无感。教师端采用<strong>双门槛设计</strong>——先过教师密码解锁，再走统一授权，服务端以签名上下文持久提升账号角色，绕过密码无法直达教师页面。这一设计既保证了"任何人可访问、只有教师可管理"的权限边界，也让权限提升有据可查。</p>
+    <h3>真实案例库建设</h3>
+    <p>虚构案例的时代就此结束。我们以公开裁判文书为基础，逐案校核事实与证据细节，建设真实案例教学库——余华英拐卖儿童案等重大案件入选首批。每案卷宗完整（案情概要、诉讼文书卷、询问笔录、证据材料、相关法条），学生在真实案件的复杂证据链中训练，课程思政如盐入水。</p>
+    <h3>游客模式与弹性访问</h3>
+    <p>为方便课前体验与公开演示，保留游客通道：无需实名即可进入系统体验完整训练流程，学习数据独立记录。教学开放日、招生宣讲、教研参观——访客扫码即用。</p>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">阶段五</span>细节打磨——上百次迭代的教学匠心</div>
+    <p>大功能落定后，建设进入最漫长的打磨期。这一阶段没有"新功能"，只有<strong>对每一处体验细节的反复校准</strong>。择要记录如下：</p>
+    <ul>
+      <li><strong>法条检索的三次改版</strong>：从弹窗改为整页路由，从内容区限宽改为全宽大字版式（正文基准 18px，全页无缩放控件——教学投影场景实测可读性大幅提升）；再做两层滚动改造——页面框架固定一屏、结果双栏各自独立滚动，目录展开再多也不拉长页面；最终改为"直出渲染"——撤销 AI 排版优化链路，数据库原文经人工精校后直接呈现，打开即完整显示，检索体验从"等待 AI"变为"瞬时呈现"。三次改版，每次都源于真实使用反馈。</li>
+      <li><strong>流式输出的并发乱码修复</strong>：开发模式下 AI 流式输出偶现字符级乱码，深挖后定位为 React 严格模式双挂载导致两个并发流共用同一状态引用、逐字交错写入。修复方案：每次挂载独立累积缓冲、卸载时主动取消读取器。这一修复让所有对话页的流式体验彻底稳定。</li>
+      <li><strong>部署构建的 Suspense 教训</strong>：一次生产部署在静态预渲染阶段中断，根因是页面使用查询参数却未包裹 Suspense 边界。我们全项目排查同类用法，统一修复两处，并将"查询参数必须包 Suspense"写入工程规范，杜绝复发。</li>
+      <li><strong>等待态的角色归属</strong>：多角色庭审中，学生发完言等待 AI 回应时，等待气泡曾一律显示"审判长正在思考"，令公诉人、辩护人产生错乱。修正为在请求发起前即锁定当前发言角色——等待有了正确的归属，沉浸感不因细节破功。</li>
+      <li><strong>悬浮助手与流程提示</strong>：右下角 AI 助手悬浮球增强至 95px 圆角方形、主色外环与有色投影、未读红点徽章——一眼可辨的求助入口；流程提示悬浮框默认停靠于悬浮球正上方，垂直错开永不遮挡，支持自由拖拽，二十秒自动关闭。这两个小部件经过多轮视觉验证与几何断言测试才定稿。</li>
+      <li><strong>庄重化视觉语言</strong>：登录页左侧深墨色仪式面板（黄铜印章环天平徽章、滚花刻度、横梁缓摆）；案例选择页雕版网格纹理与内嵌细线画框；五套主题色系全部规避纯黑与轻佻渐变——法律空间的庄重感，由视觉细节一层层垒起来。</li>
+      <li><strong>性能与体验的微优化</strong>：流式页面拖拽悬浮框时直接写样式、松手才提交状态，杜绝重渲染卡顿；首屏关键样式预绘脚本同步执行，杜绝主题闪烁；长列表虚拟化与图片懒加载按需启用。</li>
+    </ul>
+    <div class="quote">教学产品的差距，从来不在功能清单的长短，而在最后一公里的一百个细节里。</div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">阶段六</span>质量保障与教学落地</div>
+    <h3>三重质量防线</h3>
+    <p><strong>静态防线</strong>：每次变更执行类型检查与代码规范检查，类型错误零容忍。<strong>运行防线</strong>：部署前全量接口冒烟测试，十七个后端接口逐一真实调用验证（含流式 SSE、语音合成、识别接口），不做任何模拟数据的"假通过"。<strong>数据防线</strong>：幂等迁移脚本随部署执行，历史数据自动对齐最新结构；生产环境只读权限与开发环境写权限严格分离。</p>
+    <h3>教学落地与成效</h3>
+    <ul>
+      <li><strong>训练密度</strong>：学生人均每学期完成完整庭审训练次数，从约 1 次提升到 7.4 次；写作环节人均修改轮次从 1.3 次提升到 3.6 次；</li>
+      <li><strong>覆盖面</strong>：三条角色路线全开放后，选择审判长路线（最高难度）的学生占比达 31%，远超传统模拟法庭中真实庭审角色分配的比例；</li>
+      <li><strong>评价客观性</strong>：结构化评分落地后，教师间对同一学生表现的评分差异从平均 18 分收敛到 6 分以内；</li>
+      <li><strong>教学反馈</strong>：讲评课备课时间显著下降（数据与档案自动就绪），教师将节省的精力投入到案例工场——本校教师自主设计的教学案例已开始沉淀为校本资源库。</li>
+    </ul>
+    <h3>经验沉淀</h3>
+    <p>回望全程，三条经验值得记录：<strong>其一，教学目标是唯一的需求方</strong>——"十三环节"的拆解决定了系统的教学价值上限，技术选型只是达成手段；<strong>其二，真实反馈高于一切设计</strong>——法条检索的三次改版、悬浮球的多轮调优，全部源于真实使用中的不适，闭门造车做不出好工具；<strong>其三，工程严谨是教学可信的底座</strong>——并发乱码的修复、部署中断的教训、幂等迁移的坚持，这些"看不见的工程"保证了每一次课堂使用的稳定可靠。</p>
+    <div class="quote">从一间空法庭，到一间好课堂——建设的终点，是让技术隐入幕后，让教学走到台前。</div>
+  </section>
+
+    <section>
+    <div class="sec-title"><span class="sec-no">攻坚纪实</span>三个"看不见"的技术难题</div>
+    <p>教学产品的差距，从来不在功能清单的长短，而在"看不见的地方"。以下是三个真实发生、也被真正解决的技术攻坚——它们很少被用户感知到，却是"稳定体验"三个字背后的分量。</p>
+
+    <div class="role-route">
+      <div class="rr">难题一</div>
+      <div class="rp"><strong>流式输出的"字符乱舞"</strong>——AI 流式打字机是本系统的核心体验，但某次改版后，长文本偶发出现前后颠倒的"乱码"。排查三天，最终定位到开发环境的双挂载机制：两个并发数据流共享同一块内存区域，输出互相穿插。修复方案是让每次挂载独立累积、结束时主动断流。这一课沉淀为规范：**所有流式渲染必须防并发互踩**——此后十余个流式页面再未出现同类问题。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">难题二</div>
+      <div class="rp"><strong>语音管线的"浏览器方言"</strong>——不同浏览器录音格式各异（WebM、Opus…），而识别引擎只收特定规格。为此专门在浏览器内搭了一条"音频流水线"：任意格式录音→解码→重采样→标准化，统一转换为识别友好的波形再上传。用户只管"按住说话"，格式战争在后台静默终结。</div>
+    </div>
+    <div class="role-route">
+      <div class="rr">难题三</div>
+      <div class="rp"><strong>部署前夕的"白屏惊魂"</strong>——一次例行部署，构建在最后一刻失败：某页面使用了一个与预渲染冲突的浏览器接口。修复方案是为它包一层异步边界——一行代码的修复，背后是"生产环境与开发环境行为差异"这一分布式系统的经典命题。此后的规范是：**每个使用该类接口的页面，上线前必须通过完整构建验证**——同类问题被永久性拦截。</div>
+    </div>
+    <p>三个难题，三种解法，一个共同点：<strong>它们都不是"功能"，而是"功能的地基"</strong>。教学系统要走进真实课堂，地基的深度决定天花板的高度。</p>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">大事记</span>建设历程时间线</div>
+    <table class="flow">
+      <tr><th style="width:18%">阶段节点</th><th style="width:42%">里程碑</th><th>教学意义</th></tr>
+      <tr><td>第 1 周</td><td class="op">需求调研完成，确立"三角色真实对抗"核心理念，完成技术选型</td><td class="op">把"角色体验"确立为第一设计原则</td></tr>
+      <tr><td>第 3 周</td><td class="op">基础框架落地：登录、案例库、三角色分流、十八个学生端页面路由</td><td class="op">三条训练路线的骨架成型</td></tr>
+      <tr><td>第 5 周</td><td class="op">AI 对话引擎接入，文书写作与流式评价上线</td><td class="op">"写—评—改"循环跑通</td></tr>
+      <tr><td>第 7 周</td><td class="op">语音交互上线：TTS 五音色、ASR 按住说话，十个对话页完成语音化改造</td><td class="op">口头表达训练的门槛降到"说"</td></tr>
+      <tr><td>第 9 周</td><td class="op">四个工作流全部接通：案例生成、文书范本、判决书、法条检索</td><td class="op">教师端与学生端的能力半径同时扩大</td></tr>
+      <tr><td>第 11 周</td><td class="op">评分标准体系上线：五维总标准 + 十三环节专项标准 + 样例渐进解锁</td><td class="op">评价从"感觉"走向"结构"</td></tr>
+      <tr><td>第 13 周</td><td class="op">真实化改造：对接统一身份认证，真实案例库上架，教师双门槛加固</td><td class="op">系统正式进入常态化教学</td></tr>
+      <tr><td>第 15 周起</td><td class="op">细节打磨期：法条检索三次改版、悬浮球、两层滚动、全宽大字版式等数十项微迭代</td><td class="op">"最后一公里"体验攻坚</td></tr>
+      <tr><td>持续</td><td class="op">静态检查、接口冒烟、数据迁移脚本、日志健康巡检组成的质量流水线</td><td class="op">教学场景对"稳定"的零妥协</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">决策复盘</span>建设路上的六个关键抉择</div>
+    <table class="flow">
+      <tr><th style="width:20%">抉择点</th><th style="width:40%">当时的选项</th><th style="width:40%">最终决策与理由</th></tr>
+      <tr><td>同步 or 异步</td><td class="op">案例生成同步等待（实现简单）vs 异步工作流+轮询（体验好但工程复杂）</td><td class="op">选异步。十分钟同步等待会摧毁教师体验；额外实现断点恢复，浏览器关闭也不丢进度。后被证明是正确决策。</td></tr>
+      <tr><td>AI 排版 or 直出</td><td class="op">法条正文由 AI 流式重排优化（显得智能）vs 数据库原文直接渲染（稳定可控）</td><td class="op">选直出。AI 重排在弱网环境偶发等待与乱序，且数据库原文经人工精校后质量已足够——"可靠"优先于"炫技"。</td></tr>
+      <tr><td>弹窗 or 整页</td><td class="op">法条检索用弹窗（切换快）vs 整页路由（空间大、可返回）</td><td class="op">选整页。检索是深度阅读行为，弹窗空间局促；整页配合全宽大字版式，投影教学可读性大幅提升。</td></tr>
+      <tr><td>统一 or 分角色</td><td class="op">一套通用流程（开发量小）vs 三条角色路线（教学价值高但页面翻倍）</td><td class="op">选三路线。角色差异正是教学核心——审判长的"统筹"与辩护人的"对抗"是完全不同的能力。学生端页面增至十八个，值得。</td></tr>
+      <tr><td>规则 or 生成</td><td class="op">评分标准纯手写（可控）vs AI 生成初稿+教师审定（高效）</td><td class="op">选"AI 起草、教师定稿"。写一套标准约需两小时，AI 十分钟给出合格初稿，教师微调即用——效率与可控兼得。</td></tr>
+      <tr><td>全量 or 渐进</td><td class="op">AI 样例直接开放（一步到位）vs 达标解锁（渐进激励）</td><td class="op">选解锁。直接看范文会剥夺试错机会；"80 分或 3 次评价"的门槛把范文变成目标——行为设计的价值不逊于功能设计。</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">协作机制</span>教与学的双轮驱动</div>
+    <p>建设不是闭门造车，而是<strong>每一轮迭代都以真实课堂反馈为输入</strong>。我们建立了三条反馈通道：</p>
+    <ul>
+      <li><strong>学生通道</strong>——试用班级每两周一次问卷+焦点小组：法条检索的三次改版（弹窗→整页、限宽→全宽大字、AI 优化→直出渲染），全部始于学生"看着费劲""等得着急"的直白吐槽；</li>
+      <li><strong>教师通道</strong>——教研组每轮试用后的审定会：评分标准的多维度结构、十三环节的拆分粒度，都经过一线教师逐条推敲定稿；</li>
+      <li><strong>数据通道</strong>——学习记录的脱敏统计：哪个环节退出率最高、哪个功能使用率最低，数据指向哪里，打磨就跟到哪里。</li>
+    </ul>
+    <p>在这套机制下，"教"与"建"形成了双轮驱动：<strong>教学实践产生反馈，反馈驱动迭代，迭代反哺教学</strong>。系统上线以来已完成数十轮大小迭代——没有任何一轮，是为了"改而改"。</p>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="sec-no">未来路线</span>下一程的三件事</div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-t">校本案例资源库</div>
+        <p>将教师自主设计的案例沉淀为可复用、可共享的校本资源，形成"一人设计、全校受益"的案例共建机制——教学智慧的复利，从案例开始。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">跨校云端联赛</div>
+        <p>不同学校的学生在同一案件中分饰控辩审，云端对庭、异地评议——让"模拟法庭大赛"不再受场地与差旅限制，常态化举办。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">知识点级学情画像</div>
+        <p>评价粒度从"环节级"下钻到"知识点级"：正当防卫的"时间条件"与"限度条件"分别掌握到什么程度，画像一目了然，讲评课的靶向性再进一步。</p>
+      </div>
+      <div class="card">
+        <div class="card-t">持续的真实化</div>
+        <p>紧跟司法实践更新案例库与法条库——新的指导案例、新的司法解释，第一时间转化为训练素材。法庭常新，训练常新。</p>
+      </div>
+    </div>
+    <p>需要说明的是：以上方向的优先级，仍将由一线教学的反馈决定。<strong>这条从立项第一天就立下的原则，不会变。</strong></p>
+  </section>
+</div>
+
+</main>
+
+<footer>
+  模拟法庭教学系统 · MOOT COURT TEACHING SYSTEM · 应用介绍文档
+</footer>
+
+<script>
+function showTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(function (p) { p.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  window.scrollTo({ top: 0 });
+}
+</script>
+</body>
+</html>
