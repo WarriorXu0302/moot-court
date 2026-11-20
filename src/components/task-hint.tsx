@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { getTaskHint } from '@/lib/task-hints';
+import { useAppStore } from '@/lib/store';
 import { X, CheckSquare, GripVertical, ListTodo } from 'lucide-react';
 
 const AUTO_CLOSE_MS = 20000;
@@ -14,7 +15,8 @@ interface DragState {
 
 export function TaskHint() {
   const pathname = usePathname();
-  const hint = getTaskHint(pathname);
+  const caseType = useAppStore((st) => st.selectedCase?.caseType);
+  const hint = getTaskHint(pathname, caseType);
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevHintTitleRef = useRef<string | null>(null);

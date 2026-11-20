@@ -70,8 +70,33 @@ const CRIMINAL: Record<UserRole, TrainingStep[]> = {
   ],
 };
 
+/** 涉外民商事诉讼：与仲裁同一套页面与路线，只是文书与环节名不同 */
+const CIVIL: Record<UserRole, TrainingStep[]> = {
+  prosecutor: [
+    { label: '案情研读', path: '/student/case-detail' },
+    { label: '撰写民事起诉状', path: '/student/arbitration-writing?doc=claim' },
+    { label: '法庭调查', path: '/student/arbitration-hearing?phase=investigation' },
+    { label: '法庭辩论', path: '/student/arbitration-hearing?phase=debate' },
+    { label: '宣判与分析', path: '/student/arbitration-closing' },
+  ],
+  defender: [
+    { label: '案情研读', path: '/student/case-detail' },
+    { label: '撰写答辩状', path: '/student/arbitration-writing?doc=answer' },
+    { label: '法庭调查', path: '/student/arbitration-hearing?phase=investigation' },
+    { label: '法庭辩论', path: '/student/arbitration-hearing?phase=debate' },
+    { label: '宣判与分析', path: '/student/arbitration-closing' },
+  ],
+  judge: [
+    { label: '案情研读', path: '/student/case-detail' },
+    { label: '法庭调查', path: '/student/arbitration-hearing?phase=investigation' },
+    { label: '法庭辩论', path: '/student/arbitration-hearing?phase=debate' },
+    { label: '合议并撰写判决书', path: '/student/arbitration-writing?doc=award' },
+    { label: '宣判与分析', path: '/student/arbitration-closing' },
+  ],
+};
+
 export function getTrainingSteps(caseType: CaseType, role: UserRole): TrainingStep[] {
-  return (caseType === 'arbitration' ? ARBITRATION : CRIMINAL)[role];
+  return (caseType === 'arbitration' ? ARBITRATION : caseType === 'civil' ? CIVIL : CRIMINAL)[role];
 }
 
 /** 当前步骤下标；不在路线上返回 -1 */

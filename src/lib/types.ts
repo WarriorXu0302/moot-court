@@ -44,7 +44,7 @@ export interface PersonData {
 export interface CaseData {
   id: string;
   /** 案件类型，缺省视为刑事（存量数据兼容） */
-  caseType?: 'criminal' | 'arbitration';
+  caseType?: import('./case-type').CaseType;
   /** 仲裁案例元数据（规则/仲裁地/准据法/争议焦点），见 src/lib/case-type.ts */
   meta?: import('./case-type').ArbitrationMeta;
   name: string;

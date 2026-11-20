@@ -105,22 +105,27 @@ export function buildArbitrationScoringPrompt(caseData: {
   teach?: string | null;
   case_info?: string | null;
   meta?: ArbitrationMeta | null;
+  caseType?: string | null;
 }): string {
-  const fw = ARBITRATION_SCORING_FRAMEWORK;
+  const civil = caseData.caseType === 'civil';
+  const fw = civil ? CIVIL_SCORING_FRAMEWORK : ARBITRATION_SCORING_FRAMEWORK;
   const stageList = fw.stages
     .map((s) => `${s.key}｜${s.name}｜适用角色:${s.roles.join('/')}｜考核要点:\n${s.points.map((p) => `  - ${p}`).join('\n')}`)
     .join('\n');
-  const metaLine = caseData.meta
+  const metaLine = civil
+    ? `受案法院：${caseData.meta?.court || '见案情'}；争议焦点：${caseData.meta?.issues.map((i) => i.title).join('、') || '未指定'}`
+    : caseData.meta
     ? `仲裁规则：${caseData.meta.rules}；仲裁地：${caseData.meta.seat || '未指定'}；实体准据法：${caseData.meta.governingLaw || '未指定'}；争议焦点：${caseData.meta.issues.map((i) => i.title).join('、') || '未指定'}`
     : '';
 
-  return `你是模拟仲裁教学系统的教学督导，请依据"系统评分框架"和本案资料，为本案例生成一套完整的评分标准。
+  const kind = civil ? '涉外民商事诉讼' : '模拟仲裁';
+  return `你是${kind}教学系统的教学督导，请依据"系统评分框架"和本案资料，为本案例生成一套完整的评分标准。
 
 # 案例资料
 案例名称：${caseData.name || ''}
 案件概况：${(caseData.profile || '').slice(0, 2000)}
 教学目标：${(caseData.teach || '').slice(0, 1500)}
-仲裁基本信息：${metaLine}
+${civil ? '案件基本信息' : '仲裁基本信息'}：${metaLine}
 案件详情：${(caseData.case_info || '').slice(0, 3000)}
 
 # 系统评分框架
@@ -132,15 +137,15 @@ ${fw.gradingBands.map((b) => `- ${b.band}（${b.range}分）：${b.desc}`).join(
 ${stageList}
 
 # 生成要求
-1. 结合本案具体案情（争议类型、仲裁协议约定、争议焦点、证据特点、教学目标），将框架落实为本案专属评分标准；
-2. 各环节保留框架考核要点精神，criteria 必须体现本案特点（引用本案仲裁条款的关键约定、关键证据类型、争议焦点等）；
+1. 结合本案具体案情（争议类型、${civil ? '涉外因素与准据法' : '仲裁协议约定'}、争议焦点、证据特点、教学目标），将框架落实为本案专属评分标准；
+2. 各环节保留框架考核要点精神，criteria 必须体现本案特点（引用本案${civil ? '冲突规范与连结点' : '仲裁条款的关键约定'}、关键证据类型、争议焦点等）；
 3. 每个环节 3-4 个评分维度，权重之和为 100，每个维度 weight 为整数；
 4. 总标准 overall.dimensions 必须保留框架的 6 个维度（含"AI 应用能力（核查力）"），权重之和为 100；
 5. 不得在 criteria 或 points 中编造法条号、案号；需要提及法律依据时只写原则性表述；
 6. 输出严格的 JSON（不要markdown代码块、不要任何多余文字），结构如下：
 {
   "overall": {
-    "dimensions": [{"name":"管辖权与仲裁协议论证","weight":20,"criteria":"结合本案…"}],
+    "dimensions": [{"name":"${fw.overallDimensions[0].name}","weight":${fw.overallDimensions[0].weight},"criteria":"结合本案…"}],
     "grading": [{"band":"优秀","range":"90-100","desc":"…"},{"band":"良好","range":"75-89","desc":"…"},{"band":"基本可以","range":"60-74","desc":"…"},{"band":"需改进","range":"0-59","desc":"…"}]
   },
   "stages": [
@@ -150,4 +155,88 @@ ${stageList}
 }
 7. stages 必须覆盖框架列出的全部 ${fw.stages.length} 个环节，key 与框架完全一致；
 8. 所有 criteria 控制在 80 字以内，points 每条控制在 60 字以内。`;
+}
+
+/**
+ * 涉外民商事诉讼评分框架（结构与仲裁版一致，环节 key 用 civil- 前缀，页面按 caseType 取用）。
+ * ⚠ 考核要点为初稿，须由课题组校准。
+ */
+export const CIVIL_SCORING_FRAMEWORK = {
+  overallDimensions: [
+    { name: '涉外定性与准据法论证', weight: 25, desc: '能否准确认定涉外性、识别法律关系，找到正确的冲突规范与连结点并确定准据法' },
+    { name: '证据运用与质证', weight: 15, desc: '围绕真实性、合法性、关联性举证质证，注意域外证据的形式要件' },
+    { name: '外国法查明与实体法适用', weight: 20, desc: '外国法查明途径与结论是否可靠，实体法引用是否准确，有无编造或误引' },
+    { name: '程序意识与庭审表现', weight: 15, desc: '是否遵守庭审步骤，陈述、发问、辩论是否规范、有层次' },
+    { name: '文书质量', weight: 15, desc: '起诉状、答辩状、判决书的结构、说理与格式是否规范' },
+    { name: 'AI 应用能力（核查力）', weight: 10, desc: '对 AI 给出的条文、条约、判例是否自行核查，能否识别并纠正 AI 的错误或幻觉' },
+  ],
+  gradingBands: ARBITRATION_SCORING_FRAMEWORK.gradingBands,
+  stages: [
+    {
+      key: 'case-detail',
+      name: '案例研习',
+      roles: ['prosecutor', 'defender', 'judge'],
+      points: [
+        '从所选角色视角分析案情，识别涉外因素与法律关系',
+        '初步判断应适用的冲突规范与准据法，识别是否涉及先决问题、强制性规定、公共秩序保留或外国法查明',
+        '能识别争议焦点与关键证据，并对 AI 助手给出的法律依据保持核查意识',
+      ],
+    },
+    {
+      key: 'civil-claim-writing',
+      name: '民事起诉状撰写',
+      roles: ['prosecutor'],
+      points: [
+        '当事人信息、诉讼请求（具体、可执行）、管辖依据、事实与理由、证据清单结构完整',
+        '论证涉外性、定性与准据法，冲突规范与连结点准确',
+        '引用的条文、条约、判例真实可核查',
+      ],
+    },
+    {
+      key: 'civil-answer-writing',
+      name: '答辩状撰写',
+      roles: ['defender'],
+      points: [
+        '针对原告每项诉讼请求逐项答辩，管辖异议（如有）理由充分',
+        '就定性与准据法提出有依据的抗辩，必要时援用强制性规定或公共秩序保留',
+        '事实抗辩与证据对应；引用的法律依据真实可核查',
+      ],
+    },
+    {
+      key: 'civil-investigation',
+      name: '法庭调查',
+      roles: ['prosecutor', 'defender', 'judge'],
+      points: [
+        '诉讼请求与答辩陈述清楚，法律适用意见紧扣冲突规范与连结点',
+        '举证说明证据来源与证明目的；质证按三性逐项表态，关注域外证据形式要件',
+        '询问外国法查明专家聚焦法律文本来源、方法与中立性',
+        '审判长：争议焦点归纳将法律适用问题与实体问题分开，发问一次一问，程序中立',
+      ],
+    },
+    {
+      key: 'civil-debate',
+      name: '法庭辩论',
+      roles: ['prosecutor', 'defender', 'judge'],
+      points: [
+        '辩论意见围绕争议焦点，先法律适用后实体问题，层次清晰',
+        '第二轮辩论直接回应对方观点，不重复已有陈述',
+        '审判长：宣布程序简明，引导围绕焦点辩论，不对实体结果表态',
+      ],
+    },
+    {
+      key: 'civil-judgment-writing',
+      name: '民事判决书撰写',
+      roles: ['judge'],
+      points: [
+        '"本院认为"先说理法律适用：涉外性、定性、冲突规范、准据法与外国法查明',
+        '事实认定基于证据，证明责任分配正确',
+        '判决主文明确可执行，与诉讼请求对应，不超出请求；诉讼费用负担与上诉告知规范',
+      ],
+    },
+  ],
+};
+
+/** 按类型取评分框架 */
+export function getScoringFramework(caseType: unknown) {
+  return caseType === 'civil' ? CIVIL_SCORING_FRAMEWORK : ARBITRATION_SCORING_FRAMEWORK;
 }

@@ -5,7 +5,8 @@
  * 失败时一律回落到固定兜底题与固定节点，保证 UI 不卡住。
  */
 import type { CaseData, CaseLifecycle, LifecycleNode, UserRole } from './types';
-import { getRoleLabel } from './case-type';
+import { getRoleLabel, type AdversarialCaseType } from './case-type';
+import { CIVIL_ROLE_FOCUS, CIVIL_FALLBACK, CIVIL_PRE_NODES, CIVIL_ROLE_PRE, CIVIL_PAGE_STAGE } from './civil-study';
 import { describeArbitrationMeta } from './arbitration-case-utils';
 import { useAppStore } from './store';
 
@@ -53,17 +54,21 @@ const FALLBACK: Record<UserRole, string[]> = {
   ],
 };
 
-export function getArbitrationFallbackQuestions(role: UserRole): string[] {
-  return FALLBACK[role];
+const toType = (t: unknown): AdversarialCaseType => (t === 'civil' ? 'civil' : 'arbitration');
+
+export function getArbitrationFallbackQuestions(role: UserRole, caseType: unknown = 'arbitration'): string[] {
+  return toType(caseType) === 'civil' ? CIVIL_FALLBACK[role] : FALLBACK[role];
 }
 
 export async function generateArbitrationQuestions(caseData: CaseData, role: UserRole): Promise<string[]> {
-  const system = `你是国际仲裁与国际民事诉讼法教授，请根据以下案件资料，为${getRoleLabel('arbitration', role)}角色生成9个有针对性的思考题。
+  const civil = toType(caseData.caseType) === 'civil';
+  const fallback = civil ? CIVIL_FALLBACK[role] : FALLBACK[role];
+  const system = `你是${civil ? '国际私法' : '国际仲裁与国际民事诉讼法'}教授，请根据以下案件资料，为${getRoleLabel(toType(caseData.caseType), role)}角色生成9个有针对性的思考题。
 
 要求：
 1. 问题必须紧密结合本案具体材料（当事人名称、合同条款、证据名称、争议焦点等），不能是泛泛的通用问题
-2. 从${ROLE_FOCUS[role]}出发设计问题
-3. 覆盖管辖权与仲裁协议、事实认定、证据分析、法律适用、程序等维度
+2. 从${civil ? CIVIL_ROLE_FOCUS[role] : ROLE_FOCUS[role]}出发设计问题
+3. 覆盖${civil ? '涉外性与定性、冲突规范与准据法、外国法查明、事实认定与证据、管辖与程序' : '管辖权与仲裁协议、事实认定、证据分析、法律适用、程序'}等维度
 4. 每个问题有明确的分析指向
 5. 只输出问题列表，每行一个，用数字编号，不要输出其他内容
 
@@ -74,7 +79,7 @@ export async function generateArbitrationQuestions(caseData: CaseData, role: Use
 案件概要: ${caseData.profile || ''}
 ${describeArbitrationMeta(caseData)}
 案件基本资料: ${caseData.case || ''}
-仲裁文书卷: ${caseData.plead || ''}
+${civil ? '诉讼文书卷' : '仲裁文书卷'}: ${caseData.plead || ''}
 证人与专家陈述: ${caseData.record || ''}
 证据材料: ${caseData.evidence || ''}
 法律依据: ${caseData.law || ''}`;
@@ -111,9 +116,9 @@ ${describeArbitrationMeta(caseData)}
       .map((l) => l.replace(/^\d+[.、)]\s*/, '').trim())
       .filter((l) => l.length > 0);
     if (qs.length >= 5) return qs.slice(0, 9).map((q, i) => `${i + 1}. ${q}`);
-    return FALLBACK[role];
+    return fallback;
   } catch {
-    return FALLBACK[role];
+    return fallback;
   }
 }
 
@@ -171,16 +176,18 @@ const ROLE_PRE: Record<UserRole, string[]> = {
   judge: ['签订仲裁协议', '争议发生', '提交仲裁申请', '受理与答辩', '组成仲裁庭'],
 };
 
-export function getArbitrationInitialLifecycle(role: UserRole | null): CaseLifecycle {
-  const keys = ROLE_PRE[role ?? 'defender'];
-  return { nodes: keys.map((k) => PRE_NODES[k]).filter(Boolean) };
+export function getArbitrationInitialLifecycle(role: UserRole | null, caseType: unknown = 'arbitration'): CaseLifecycle {
+  const civil = toType(caseType) === 'civil';
+  const keys = (civil ? CIVIL_ROLE_PRE : ROLE_PRE)[role ?? 'defender'];
+  const nodes = civil ? CIVIL_PRE_NODES : PRE_NODES;
+  return { nodes: keys.map((k) => nodes[k]).filter(Boolean) };
 }
 
-/** 进入仲裁案例详情页时写入初始生命周期（已有则不覆盖） */
-export function setArbitrationInitialLifecycle(role: UserRole | null): void {
+/** 进入仲裁 / 涉外诉讼案例详情页时写入初始生命周期（已有则不覆盖） */
+export function setArbitrationInitialLifecycle(role: UserRole | null, caseType: unknown = 'arbitration'): void {
   const store = useAppStore.getState();
   if (store.lifecycle && store.lifecycle.nodes && store.lifecycle.nodes.length > 0) return;
-  store.setLifecycle(getArbitrationInitialLifecycle(role));
+  store.setLifecycle(getArbitrationInitialLifecycle(role, caseType));
 }
 
 // ===== 页面 → 阶段映射（供 advanceLifecycleForPage 之外的仲裁页使用） =====
@@ -239,7 +246,8 @@ export const ARB_PAGE_STAGE: Record<string, LifecycleNode> = {
 
 /** 标记仲裁某步骤完成（按 stage 名称去重，已有则置 completed，没有则追加） */
 export function advanceArbitrationLifecycle(key: keyof typeof ARB_PAGE_STAGE): void {
-  const node = ARB_PAGE_STAGE[key];
+  const caseType = toType(useAppStore.getState().selectedCase?.caseType);
+  const node = (caseType === 'civil' ? CIVIL_PAGE_STAGE : ARB_PAGE_STAGE)[key];
   if (!node) return;
   const store = useAppStore.getState();
   const cur = store.lifecycle;

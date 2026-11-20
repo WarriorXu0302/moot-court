@@ -31,7 +31,7 @@ export function parseCaseItems(raw: string | undefined | null): Item[] {
 export function buildArbitrationFileSections(c: CaseData | null | undefined): CaseFileSection[] {
   if (!c) return [];
   return [
-    { label: '仲裁文书卷', items: parseCaseItems(c.plead) },
+    { label: c.caseType === 'civil' ? '诉讼文书卷' : '仲裁文书卷', items: parseCaseItems(c.plead) },
     { label: '证人与专家陈述', items: parseCaseItems(c.record) },
     { label: '证据材料', items: parseCaseItems(c.evidence) },
     { label: '法律依据', items: parseCaseItems(c.law) },
@@ -59,6 +59,7 @@ export function describeArbitrationMeta(c: CaseData | null | undefined): string 
   const m = c?.meta;
   if (!m) return '';
   const issues = m.issues.length ? `；争议焦点：${m.issues.map((i) => i.title).join('、')}` : '';
+  if (c?.caseType === 'civil') return `受案法院：${m.court || '见案情'}${issues}`;
   return `仲裁规则：${m.rules}；仲裁地：${m.seat || '未指定'}；实体准据法：${m.governingLaw || '未指定'}；争议金额：${m.claimAmount || '未指定'}${issues}`;
 }
 
@@ -66,15 +67,16 @@ export function describeArbitrationMeta(c: CaseData | null | undefined): string 
 export function buildArbitrationContext(c: CaseData | null | undefined, documents: Record<string, string> = {}): string {
   if (!c) return '';
   const part = (label: string, v: string | undefined) => (v && v.trim() ? `${label}:\n${v}\n\n` : '');
+  const civil = c.caseType === 'civil';
   return (
     part('案件基本资料', c.case) +
-    part('仲裁基本信息', describeArbitrationMeta(c)) +
-    part('仲裁文书卷（含申请书、答辩状）', c.plead) +
+    part(civil ? '案件基本信息' : '仲裁基本信息', describeArbitrationMeta(c)) +
+    part(civil ? '诉讼文书卷（含起诉状、答辩状）' : '仲裁文书卷（含申请书、答辩状）', c.plead) +
     part('证人与专家陈述笔录', c.record) +
     part('证据材料', c.evidence) +
     part('法律依据', c.law) +
-    part('申请人提交的仲裁申请书（学生撰写）', documents.claim) +
-    part('被申请人提交的答辩状（学生撰写）', documents.answer) +
+    part(civil ? '原告提交的民事起诉状（学生撰写）' : '申请人提交的仲裁申请书（学生撰写）', documents.claim) +
+    part(civil ? '被告提交的答辩状（学生撰写）' : '被申请人提交的答辩状（学生撰写）', documents.answer) +
     part('角色资料', c.person)
   );
 }

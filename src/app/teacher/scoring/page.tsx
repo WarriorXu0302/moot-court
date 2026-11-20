@@ -12,28 +12,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { parseScoringStandards } from '@/lib/scoring';
 import type { GradingBand, ScoringDimension, ScoringStage, ScoringStandards } from '@/lib/scoring';
 import type { CaseData } from '@/lib/types';
-import { ROLE_LABELS, type CaseType } from '@/lib/case-type';
+import { ROLE_LABELS, normalizeCaseType, isAdversarial, type CaseType } from '@/lib/case-type';
 
 const ROLE_GROUPS = ['全部', '案例研习', '辩护人', '公诉人', '审判长'] as const;
 const ROLE_LABEL: Record<string, string> = {
   all: '全员', common: '全员', student: '全员',
   defender: '辩护人', prosecution: '公诉人', prosecutor: '公诉人', judge: '审判长',
 };
-/** 仲裁案例的 Tab 与徽标：内部角色键不变，仅标签随类型 */
-const ARB_ROLE_GROUPS = ['全部', ROLE_LABELS.arbitration.prosecutor, ROLE_LABELS.arbitration.defender, ROLE_LABELS.arbitration.judge] as const;
-const ARB_ROLE_LABEL: Record<string, string> = {
-  all: '全员', common: '全员', student: '全员',
-  defender: ROLE_LABELS.arbitration.defender,
-  prosecutor: ROLE_LABELS.arbitration.prosecutor,
-  judge: ROLE_LABELS.arbitration.judge,
-};
-/** 仲裁 Tab 标签 → 内部角色键（与种子 stages[].roles 对齐） */
-const ARB_TAB_TO_ROLE: Record<string, string> = {
-  [ROLE_LABELS.arbitration.prosecutor]: 'prosecutor',
-  [ROLE_LABELS.arbitration.defender]: 'defender',
-  [ROLE_LABELS.arbitration.judge]: 'judge',
-};
-
 export default function TeacherScoringPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-screen text-muted-foreground">加载中...</div>}>
@@ -66,7 +51,7 @@ function TeacherScoringContent() {
         const c = result.case as CaseData | undefined;
         if (!alive || !c) return;
         setCaseName(c.name);
-        setCaseType(c.caseType === 'arbitration' ? 'arbitration' : 'criminal');
+        setCaseType(normalizeCaseType(c.caseType));
         const parsed = parseScoringStandards(typeof c.scoringStandards === 'string' ? c.scoringStandards : c.judge);
         if (parsed) setDraft(structuredClone(parsed));
       } catch {
@@ -205,17 +190,20 @@ function TeacherScoringContent() {
     setDirty(true);
   };
 
-  const isArb = caseType === 'arbitration';
-  const roleGroups: readonly string[] = isArb ? ARB_ROLE_GROUPS : ROLE_GROUPS;
-  const roleLabel: Record<string, string> = isArb ? ARB_ROLE_LABEL : ROLE_LABEL;
+  const isArb = isAdversarial(caseType);
+  // 仲裁 / 涉外诉讼：Tab 与徽标用该类型的角色名
+  const advLabels = isArb ? ROLE_LABELS[caseType] : null;
+  const roleGroups: readonly string[] = advLabels ? ['全部', advLabels.prosecutor, advLabels.defender, advLabels.judge] : ROLE_GROUPS;
+  const roleLabel: Record<string, string> = advLabels ? { all: '全员', common: '全员', student: '全员', ...advLabels } : ROLE_LABEL;
 
   const visibleStages = useMemo(() => {
     if (!draft) return [];
     if (roleTab === '全部') return draft.stages;
     // 仲裁：把 Tab 标签映射回内部角色键再过滤；刑事保持原有行为
-    const key = isArb ? (ARB_TAB_TO_ROLE[roleTab] ?? roleTab) : roleTab;
+    const labels = isAdversarial(caseType) ? ROLE_LABELS[caseType] : null;
+    const key = labels ? ((Object.entries(labels).find(([, v]) => v === roleTab)?.[0]) ?? roleTab) : roleTab;
     return draft.stages.filter((st) => st.roles.includes(key));
-  }, [draft, roleTab, isArb]);
+  }, [draft, roleTab, caseType]);
 
   if (loading) {
     return (

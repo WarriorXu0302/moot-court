@@ -28,6 +28,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useEndAnalysis } from '@/hooks/use-end-analysis';
 import { useStageDialogueLogger } from '@/hooks/use-stage-logger';
 import { getArbitrationNextRoute } from '@/lib/arbitration-route';
+import { isAdversarial } from '@/lib/case-type';
 import { generateArbitrationQuestions, setArbitrationInitialLifecycle, getArbitrationFallbackQuestions, advanceArbitrationLifecycle } from '@/lib/arbitration-study';
 import { buildArbitrationFileSections, buildArbitrationContext } from '@/lib/arbitration-case-utils';
 
@@ -88,8 +89,8 @@ export default function CaseDetailPage() {
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [questions, setQuestions] = useState<string[]>(
-    selectedCase?.caseType === 'arbitration' && selectedRole
-      ? getArbitrationFallbackQuestions(selectedRole)
+    isAdversarial(selectedCase?.caseType) && selectedRole
+      ? getArbitrationFallbackQuestions(selectedRole, selectedCase?.caseType)
       : FALLBACK_QUESTIONS,
   );
   const [questionsLoading, setQuestionsLoading] = useState(false);
@@ -116,11 +117,11 @@ export default function CaseDetailPage() {
         if (data.case) {
           setCaseData(data.case);
           setHighlightConfig(parseHighlights(data.case.highlights));
-          const isArb = data.case.caseType === 'arbitration';
-          // Generate initial lifecycle after case data is loaded（仲裁：固定庭前节点，不调 LLM）
+          const isArb = isAdversarial(data.case.caseType);
+          // Generate initial lifecycle after case data is loaded（仲裁 / 涉外诉讼：固定庭前节点，不调 LLM）
           if (!lifecycleInitRef.current) {
             lifecycleInitRef.current = true;
-            if (isArb) setArbitrationInitialLifecycle(selectedRole);
+            if (isArb) setArbitrationInitialLifecycle(selectedRole, data.case.caseType);
             else generateInitialLifecycle(data.case, selectedRole);
           }
           // Generate role-specific questions based on case materials
@@ -137,10 +138,10 @@ export default function CaseDetailPage() {
       })
       .catch(() => {
         // Use whatever we have
-        const isArb = selectedCase?.caseType === 'arbitration';
+        const isArb = isAdversarial(selectedCase?.caseType);
         if (!lifecycleInitRef.current && selectedCase) {
           lifecycleInitRef.current = true;
-          if (isArb) setArbitrationInitialLifecycle(selectedRole);
+          if (isArb) setArbitrationInitialLifecycle(selectedRole, selectedCase.caseType);
           else generateInitialLifecycle(selectedCase, selectedRole);
         }
         if (!questionsInitRef.current && selectedCase && selectedRole) {
@@ -181,7 +182,9 @@ export default function CaseDetailPage() {
       }
     : null;
 
-  const isArbitration = (caseData?.caseType ?? selectedCase?.caseType) === 'arbitration';
+  const activeType = caseData?.caseType ?? selectedCase?.caseType;
+  const isArbitration = isAdversarial(activeType);
+  const isCivil = activeType === 'civil';
 
   const caseFileSections: CaseFileSection[] = isArbitration
     ? [
@@ -232,7 +235,18 @@ export default function CaseDetailPage() {
 
 可行性评估与风险提示：如果用户提出明显偏离案件事实或法律规定的假设，你不必直接顺着用户的思路给答案，而应指出该假设与案件事实或法律规定之间的差异，提示相关风险，并引导用户回到合法合理的分析路径上。`;
 
-  const systemPromptWithContext = isArbitration ? arbitrationSystemPrompt : criminalSystemPrompt;
+  const civilSystemPrompt = `你是一个涉外民商事案例解读AI助手。请根据提供的案件资料，帮助用户分析案例的关键问题。
+你的回复应该专业、准确、条理清晰。请使用markdown格式输出，格式要求：
+- 使用 ## 标记一级标题，### 标记二级标题，不要使用纯文本编号（如"一、""（一）"）作为标题
+- 关键术语和法条名称用 **加粗** 标记
+- 列举要点时使用 - 或 1. 的 markdown 列表格式
+- 段落之间用空行分隔，保持层次清晰
+重要：你需要按国际私法的分析步骤引导用户：①本案有哪些涉外因素；②争议应如何定性；③应适用哪条冲突规范、连结点是什么、准据法是哪国法律；④是否涉及先决问题、强制性规定、公共秩序保留、法律规避或外国法查明；⑤管辖与证据问题。**不要直接告诉用户本案法院的最终结论**，而是引导其自己论证；用户论证正确时给予肯定并补充理由。
+涉及法条、条约、判例时：只引用你有把握的内容；不确定条文号或案号时，明确提示"请以法律原文核对"，严禁编造。提醒用户对 AI 给出的任何法律依据都要自行核验。
+
+可行性评估与风险提示：如果用户提出明显偏离案件事实或法律规定的假设，你不必直接顺着用户的思路给答案，而应指出该假设与案件事实或法律规定之间的差异，提示相关风险，并引导用户回到合法合理的分析路径上。`;
+
+  const systemPromptWithContext = isCivil ? civilSystemPrompt : isArbitration ? arbitrationSystemPrompt : criminalSystemPrompt;
 
   const sendMessage = useCallback(async (messageContent?: string) => {
     const content = messageContent || input.trim();
@@ -453,7 +467,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
 
   /** 本环节完成后的下一站：仲裁案例走仲裁路线，刑事保持原有路由 */
   const goToNextStage = () => {
-    if (caseData?.caseType === 'arbitration') {
+    if (isAdversarial(caseData?.caseType)) {
       router.push(getArbitrationNextRoute(selectedRole, 'case-detail'));
     } else if (selectedRole === 'prosecutor') {
       router.push('/student/sentencing-negotiation');

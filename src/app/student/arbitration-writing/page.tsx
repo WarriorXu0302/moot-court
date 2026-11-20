@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * 仲裁文书写作页（?doc=claim 仲裁申请书 | answer 答辩状 | award 裁决书）
+ * 仲裁 / 涉外诉讼文书写作页（?doc=claim 申请书·起诉状 | answer 答辩状 | award 裁决书·判决书）
  *
  * 复用现有写作页的四栏骨架：对话讨论 | 文书编辑 | 评价 | 卷宗。
- * 见 docs/arbitration-design.md 第8节。文书类型差异全部配置化在 DOC_CONFIG。
+ * 见 docs/arbitration-design.md 第8节。文书类型差异全部配置化在 lib/forum-profile.ts 的 docs。
  *
  * 约束（AGENTS.md）：useSearchParams 包在 Suspense 内；useStageDialogueLogger 用稳定 pageName；
  * 评价提示词注入本环节评分标准（stageStandardsToPrompt）；评价计数用 recordEvalProgress 持久化。
@@ -32,7 +32,7 @@ import { useAppStore } from '@/lib/store';
 import { getRoleLabel } from '@/lib/case-type';
 import { buildArbitrationContext, buildArbitrationFileSections, parseCaseItems } from '@/lib/arbitration-case-utils';
 import { getArbitrationNextRoute, type ArbitrationDoc } from '@/lib/arbitration-route';
-import { ARB_JURISDICTION_KNOWLEDGE, ARB_EVIDENCE_KNOWLEDGE, ARB_DELIBERATION_KNOWLEDGE, ARB_OPENING_KNOWLEDGE } from '@/lib/arbitration-knowledge';
+import { getForumProfile, adversarialType } from '@/lib/forum-profile';
 import {
   parseScoringStandards, getStageStandards, stageStandardsToPrompt,
   getEvalProgressMap, recordEvalProgress, canViewSample, DEFAULT_SAMPLE_UNLOCK, sampleLockedHint,
@@ -45,49 +45,6 @@ import { stripLifecycleForStreaming } from '@/lib/lifecycle-utils';
 import { advanceArbitrationLifecycle } from '@/lib/arbitration-study';
 import type { ChatMessage, LearningRecordEntry, UserRole } from '@/lib/types';
 
-interface DocConfig {
-  title: string;
-  /** 评分标准环节 key（对应 scoring 种子 stages[].key） */
-  stageKey: string;
-  /** 样例在 plead 文书卷中的标题关键词 */
-  sampleKeyword: string;
-  /** 文书结构要点（写入对话与评价提示词） */
-  structure: string;
-  evalPoints: string[];
-  knowledge: string;
-  who: string;
-}
-
-const DOC_CONFIG: Record<ArbitrationDoc, DocConfig> = {
-  claim: {
-    title: '仲裁申请书',
-    stageKey: 'arb-claim-writing',
-    sampleKeyword: '申请书',
-    structure: '当事人基本情况 → 仲裁请求（具体、可执行、含金额与费用）→ 仲裁协议及管辖依据 → 事实与理由（请求权基础、事实经过、法律依据）→ 证据清单 → 此致/申请人/日期',
-    evalPoints: ['当事人信息与代理权限是否完整准确', '仲裁请求是否具体明确、金额计算是否有依据', '仲裁协议与管辖依据是否充分，准据法论证是否到位', '事实陈述与证据对应是否清晰', '法律依据是否准确，是否存在编造条文或判例', '文书格式与语言是否规范'],
-    knowledge: [ARB_JURISDICTION_KNOWLEDGE, ARB_EVIDENCE_KNOWLEDGE].join('\n\n'),
-    who: '申请人代理人',
-  },
-  answer: {
-    title: '答辩状（含反请求）',
-    stageKey: 'arb-answer-writing',
-    sampleKeyword: '答辩',
-    structure: '答辩人基本情况 → 对仲裁请求的答辩意见 → 管辖权异议（如有）→ 事实抗辩 → 法律抗辩 → 反请求（如有）→ 证据清单 → 此致/答辩人/日期',
-    evalPoints: ['是否针对申请人的每项仲裁请求逐一答辩', '管辖权异议是否抓住仲裁协议的存在、效力、范围、准据法', '事实抗辩与证据是否对应', '法律抗辩是否准确，是否存在编造条文或判例', '反请求（如有）是否有独立的请求权基础与金额依据', '文书格式与语言是否规范'],
-    knowledge: [ARB_JURISDICTION_KNOWLEDGE, ARB_EVIDENCE_KNOWLEDGE].join('\n\n'),
-    who: '被申请人代理人',
-  },
-  award: {
-    title: '裁决书',
-    stageKey: 'arb-award-writing',
-    sampleKeyword: '裁决',
-    structure: '当事人及代理人 → 仲裁程序概述 → 案件事实与各方主张 → 争议焦点 → 仲裁庭意见（管辖权 / 事实认定 / 法律适用）→ 裁决主文 → 仲裁费用承担 → 作出地点与日期 → 仲裁员签名',
-    evalPoints: ['争议焦点归纳是否准确、完整', '管辖权问题是否先行说理', '事实认定是否基于证据，证明责任分配是否正确', '法律适用是否准确（仲裁协议准据法、实体准据法）', '裁决主文是否明确、可执行，与仲裁请求对应，无超裁漏裁', '仲裁费用承担是否有理由，裁决书格式是否规范'],
-    knowledge: [ARB_DELIBERATION_KNOWLEDGE, ARB_JURISDICTION_KNOWLEDGE, ARB_EVIDENCE_KNOWLEDGE, ARB_OPENING_KNOWLEDGE].join('\n\n'),
-    who: '首席仲裁员',
-  },
-};
-
 function parseDoc(v: string | null): ArbitrationDoc {
   return v === 'answer' || v === 'award' ? v : 'claim';
 }
@@ -96,12 +53,15 @@ function ArbitrationWritingInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const doc = parseDoc(searchParams.get('doc'));
-  const cfg = DOC_CONFIG[doc];
-  const pageName = `${cfg.title}撰写`;
 
   const { selectedCase, addLearningRecord, setDocument, documents, user, hydrated, selectedRole } = useAppStore();
+  // 仲裁与涉外民商事诉讼共用本页：文书配置随案件类型（见 lib/forum-profile.ts）
+  const caseType = adversarialType(selectedCase?.caseType);
+  const profile = getForumProfile(caseType);
+  const cfg = profile.docs[doc];
+  const pageName = `${cfg.title}撰写`;
   const role: UserRole = selectedRole ?? 'defender';
-  const roleLabel = getRoleLabel('arbitration', role);
+  const roleLabel = getRoleLabel(caseType, role);
   const { modal: endAnalysisModal, handleEndAnalysis } = useEndAnalysis({ currentPageName: pageName });
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -192,7 +152,7 @@ function ArbitrationWritingInner() {
     const controller = new AbortController();
     abortRef.current = controller;
     const throttle = createThrottledStreamSetter(setStreamingText);
-    const system = `你是国际仲裁与国际民事诉讼法教授，正在指导学生（${roleLabel}）撰写${cfg.title}。
+    const system = `你是${profile.professor}，正在指导学生（${roleLabel}）撰写${cfg.title}。
 
 文书结构参考：${cfg.structure}
 
@@ -250,7 +210,7 @@ ${cfg.evalPoints.length + 1}. 改进建议
     const throttle = createThrottledStreamSetter(setEvaluation);
     let full = '';
     try {
-      full = await streamLLM('你是国际仲裁与国际民事诉讼法教授，负责评价模拟仲裁训练中学生的文书。请使用markdown格式输出评价。', prompt, (t) => throttle.push(t));
+      full = await streamLLM(`你是${profile.professor}，负责评价${profile.trainingName}中学生的文书。请使用markdown格式输出评价。`, prompt, (t) => throttle.push(t));
       setEvaluation(full);
     } catch {
       full = '评价生成失败，请重试。';
@@ -288,7 +248,7 @@ ${messages.map((m) => `${m.speaker || m.role}: ${m.content}`).join('\n')}
 ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
     try {
       const data = await fetchSummarySections({
-        systemPrompt: '你是一位国际仲裁与国际民事诉讼法教授，负责对模拟仲裁训练的学习过程进行总结评价。' + '\n\n' + STAGE_SUMMARY_FORMAT_INSTRUCTION,
+        systemPrompt: `你是一位${profile.professor}，负责对${profile.trainingName}的学习过程进行总结评价。` + '\n\n' + STAGE_SUMMARY_FORMAT_INSTRUCTION,
         userPrompt: summaryPrompt,
         temperature: 0.5,
         onChunk: (t) => setContinueStream(t),
@@ -396,7 +356,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                       <div className="py-6 text-sm text-muted-foreground">
                         <p className="mb-2 text-foreground">可以这样问：</p>
                         <ul className="space-y-1.5">
-                          {[`${cfg.title}应该包括哪些部分？`, '本案的管辖权争点应该怎么组织论证？', '请帮我检查请求事项写得是否具体可执行'].map((q) => (
+                          {profile.quickQuestions(cfg.title).map((q) => (
                             <li key={q}>
                               <button type="button" onClick={() => setInput(q)} className="text-left text-primary underline-offset-4 hover:underline">{q}</button>
                             </li>

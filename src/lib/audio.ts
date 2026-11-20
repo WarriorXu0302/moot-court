@@ -75,6 +75,10 @@ const VOICE_MAP: Record<string, string> = {
   边裁乙: 'zh_female_vv_uranus_bigtts',
   专家证人: 'zh_male_dayi_saturn_bigtts',
   仲裁秘书: 'zh_female_xiaohe_uranus_bigtts',
+  // 涉外民商事诉讼角色：须先于“被告”“证人”等短键（includes 顺序匹配）
+  原告代理人: 'zh_male_taocheng_uranus_bigtts',
+  被告代理人: 'zh_female_vv_uranus_bigtts',
+  外国法查明专家: 'zh_male_dayi_saturn_bigtts',
   审判长: 'zh_male_m191_uranus_bigtts',
   审判员: 'zh_male_m191_uranus_bigtts',
   法官: 'zh_male_m191_uranus_bigtts',

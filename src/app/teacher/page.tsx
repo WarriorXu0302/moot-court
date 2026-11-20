@@ -16,7 +16,7 @@ import { PageHeader } from '@/components/page-header';
 import { formatDuration } from '@/lib/learning-log';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { CaseData, LearningSession } from '@/lib/types';
-import { CASE_TYPE_LABEL, EMPTY_ARBITRATION_META, ARBITRATION_RULES, type CaseType, type ArbitrationMeta } from '@/lib/case-type';
+import { CASE_TYPE_LABEL, EMPTY_ARBITRATION_META, ARBITRATION_RULES, normalizeCaseType, isAdversarial, type CaseType, type ArbitrationMeta } from '@/lib/case-type';
 import { Scale, Plus, Eye, Trash2, Upload, Loader2, Users, Clock, Timer, BarChart3, List } from 'lucide-react';
 
 const WORKFLOW_CASE_DESIGN_ID = '7656623831193223210';
@@ -443,7 +443,7 @@ function TeacherPageContent() {
         const data = await res.json();
         if (data.success) {
           // 仲裁案例跳过刑事文书工作流（会用刑事内容覆盖 indictment/defense/prosecution/person 等列）
-          if (item.status === 'generated' && item.data?.caseType !== 'arbitration') {
+          if (item.status === 'generated' && !isAdversarial(item.data?.caseType)) {
             try {
               const wfRes = await fetch('/api/workflow/run', {
                 method: 'POST',
@@ -983,7 +983,7 @@ function TeacherPageContent() {
                           <button type="button" onClick={() => handleViewCase(item)} className="min-w-0 text-left group" title={item.name}>
                             <p className="font-medium leading-snug line-clamp-2 group-hover:underline">{item.name}</p>
                             <p className="text-xs text-muted-foreground tabular-nums">
-                              {CASE_TYPE_LABEL[data?.caseType === 'arbitration' ? 'arbitration' : 'criminal']} · {new Date(item.createdAt).toLocaleDateString()}
+                              {CASE_TYPE_LABEL[normalizeCaseType(data?.caseType)]} · {new Date(item.createdAt).toLocaleDateString()}
                             </p>
                           </button>
                           <div>{getStatusBadge(item.status)}</div>
@@ -1033,7 +1033,7 @@ function TeacherPageContent() {
                               {getStatusBadge(item.status)}
                             </div>
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{CASE_TYPE_LABEL[data?.caseType === 'arbitration' ? 'arbitration' : 'criminal']} · {data?.creatorName || '\u674e\u7484\u9716'}</span>
+                              <span>{CASE_TYPE_LABEL[normalizeCaseType(data?.caseType)]} · {data?.creatorName || '\u674e\u7484\u9716'}</span>
                               <span className="whitespace-nowrap">
                                 <Clock className="h-3 w-3 inline mr-1" />
                                 {new Date(item.createdAt).toLocaleDateString()}

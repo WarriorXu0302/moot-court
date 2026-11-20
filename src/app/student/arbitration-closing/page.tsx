@@ -22,6 +22,7 @@ import { endTraining } from '@/lib/end-training';
 import { collectLearningData, formatRecordsForAnalysis, formatDuration } from '@/lib/learning-log';
 import { streamSummary, parseSummarySections, SUMMARY_FORMAT_INSTRUCTION } from '@/lib/summary-stream';
 import { advanceArbitrationLifecycle } from '@/lib/arbitration-study';
+import { getForumProfile, adversarialType } from '@/lib/forum-profile';
 import type { LearningRecordEntry, UserRole } from '@/lib/types';
 
 // 稳定空数组：禁止内联字面量传入 useStageDialogueLogger（会引发无限 setState 循环白屏）
@@ -33,7 +34,10 @@ export default function ArbitrationClosingPage() {
 
   const { selectedCase, user, hydrated, selectedRole, addLearningRecord } = useAppStore();
   const role: UserRole = selectedRole ?? 'defender';
-  const roleLabel = getRoleLabel('arbitration', role);
+  const caseType = adversarialType(selectedCase?.caseType);
+  const profile = getForumProfile(caseType);
+  const c = profile.closing;
+  const roleLabel = getRoleLabel(caseType, role);
 
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -53,9 +57,9 @@ export default function ArbitrationClosingPage() {
     triggered.current = true;
     advanceArbitrationLifecycle('closing');
     addLearningRecord({
-      pageName: '仲裁闭庭',
+      pageName: c.pageRecord,
       conversations: [],
-      summary: role === 'judge' ? '首席仲裁员宣布裁决并闭庭' : '听取仲裁庭宣布裁决结果并闭庭',
+      summary: role === 'judge' ? c.judgeSummary : c.partySummary,
       evaluation: '训练已完成全部流程',
       suggestion: '建议回顾全部学习记录，总结经验',
       createdAt: Date.now(),
@@ -67,9 +71,9 @@ export default function ArbitrationClosingPage() {
 
     const { records, documents } = collectLearningData();
     const learningContext = formatRecordsForAnalysis(records, documents);
-    const systemPrompt = `你是一位国际仲裁与国际民事诉讼法教学专家。请根据用户提供的全部学习记录，进行概括、评价和训练建议。
+    const systemPrompt = `你是一位${profile.professor}。请根据用户提供的全部学习记录，进行概括、评价和训练建议。
 
-本次模拟仲裁训练已完整走完全部流程，学生扮演的角色是${roleLabel}。请遍历【各环节学习记录】中出现的每一个环节，结合对话记录、法律文书与行为轨迹，综合评估学生的仲裁实务能力：管辖权论证、证据运用与质证、法律适用（含仲裁协议准据法）、程序意识、文书质量、以及对 AI 生成法律依据的核查意识。
+本次${profile.trainingName}已完整走完全部流程，学生扮演的角色是${roleLabel}。请遍历【各环节学习记录】中出现的每一个环节，结合对话记录、法律文书与行为轨迹，综合评估学生的实务能力：${c.analysisFocus}。
 
 得分根据学生在整个训练中的表现综合评定。
 
@@ -94,7 +98,7 @@ ${SUMMARY_FORMAT_INSTRUCTION}`;
       setRecord(finalRecord);
       addLearningRecord(finalRecord);
     } catch {
-      setRecord({ pageName: '模拟法庭训练分析报告', conversations: [], summary: '已完成全部仲裁流程', evaluation: '生成评价时出错', suggestion: '请回顾学习记录', createdAt: Date.now() });
+      setRecord({ pageName: '模拟法庭训练分析报告', conversations: [], summary: '已完成全部训练流程', evaluation: '生成评价时出错', suggestion: '请回顾学习记录', createdAt: Date.now() });
     } finally {
       setLoading(false);
       setStream('');
@@ -128,11 +132,9 @@ ${SUMMARY_FORMAT_INSTRUCTION}`;
             闭庭
           </div>
           <p className="text-sm text-muted-foreground">{selectedCase.name}</p>
-          <h2 className="mt-3 font-display text-2xl font-semibold tracking-[0.2em] text-foreground">仲裁庭审结束</h2>
+          <h2 className="mt-3 font-display text-2xl font-semibold tracking-[0.2em] text-foreground">{c.title}</h2>
           <p className="docket-text mx-auto mt-6 max-w-md text-center">
-            {role === 'judge'
-              ? '首席仲裁员宣布裁决已作出，本案仲裁程序终结，现在闭庭。'
-              : '仲裁庭将就本案合议并作出裁决。本次模拟庭审到此结束，现在闭庭。'}
+            {role === 'judge' ? c.judgeLine : c.partyLine}
           </p>
           <div className="mx-auto mt-8 max-w-sm border-t pt-6">
             <p className="mb-4 text-sm text-muted-foreground">系统会汇总你在每个环节的发言、文书和评价，生成一份训练分析。</p>
@@ -142,7 +144,7 @@ ${SUMMARY_FORMAT_INSTRUCTION}`;
           </div>
         </div>
       </div>
-      <ContinueModal open={show} onClose={doEnd} loading={loading} streamText={stream} record={record} title="模拟仲裁训练分析" buttonText="结束训练" />
+      <ContinueModal open={show} onClose={doEnd} loading={loading} streamText={stream} record={record} title={c.reportTitle} buttonText="结束训练" />
     </div>
   );
 }

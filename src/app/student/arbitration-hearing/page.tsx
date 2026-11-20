@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 国际仲裁庭审页（调查 + 辩论共用，?phase=investigation|debate）
+ * 国际仲裁 / 涉外民商事诉讼庭审页（调查 + 辩论共用，?phase=investigation|debate；类型差异见 lib/forum-profile.ts）
  *
  * 数据驱动：阶段来自 getFlow('arbitration', role, phase)，发言风格来自 arbitration-style，
  * 程序知识来自 arbitration-knowledge。见 docs/arbitration-design.md 第6、7节。
@@ -38,14 +38,7 @@ import { getFlow, type FlowPhase, type StageDef } from '@/lib/flows';
 import { getRoleLabel } from '@/lib/case-type';
 import { buildArbitrationContext, buildArbitrationFileSections, findPerson } from '@/lib/arbitration-case-utils';
 import { getArbitrationNextRoute } from '@/lib/arbitration-route';
-import { ARB_INVESTIGATION_STYLE, ARB_DEBATE_STYLE } from '@/lib/arbitration-style';
-import {
-  ARB_OPENING_KNOWLEDGE,
-  ARB_JURISDICTION_KNOWLEDGE,
-  ARB_EVIDENCE_KNOWLEDGE,
-  ARB_WITNESS_KNOWLEDGE,
-  ARB_CLOSING_KNOWLEDGE,
-} from '@/lib/arbitration-knowledge';
+import { getForumProfile, adversarialType } from '@/lib/forum-profile';
 import { parseHighlights } from '@/lib/highlights';
 import { replyFormatInstruction } from '@/lib/response-style';
 import { createThrottledStreamSetter } from '@/lib/streaming-throttle';
@@ -74,10 +67,13 @@ function ArbitrationHearingInner() {
 
   const { selectedCase, addLearningRecord, user, hydrated, learningRecords, selectedRole, documents } = useAppStore();
   const role: UserRole = selectedRole ?? 'defender';
-  const roleLabel = getRoleLabel('arbitration', role);
+  // 仲裁与涉外民商事诉讼共用本页：类型相关的措辞、知识、风格、流程全部来自 forum-profile
+  const caseType = adversarialType(selectedCase?.caseType);
+  const profile = getForumProfile(caseType);
+  const roleLabel = getRoleLabel(caseType, role);
 
-  // 稳定引用：同 (role, phase) 始终同一数组
-  const STAGES: StageDef[] = getFlow('arbitration', role, phase);
+  // 稳定引用：同 (caseType, role, phase) 始终同一数组
+  const STAGES: StageDef[] = getFlow(caseType, role, phase);
 
   const { modal: endAnalysisModal, handleEndAnalysis } = useEndAnalysis({ currentPageName: pageName });
 
@@ -152,29 +148,26 @@ function ArbitrationHearingInner() {
       mode === 'respond'
         ? `刚才${arg}向你提问或发言（见对话记录最后一条），请你以${speaker}的身份回应。注意：你是被询问的对象，只回应刚才的提问，不要代替${arg}或其他任何角色发言，更不要自行继续提问。`
         : mode === 'user-reply'
-          ? `用户（${roleLabel}）刚刚发言："${arg}"，请你以${speaker}的身份简短回应。注意：你只扮演${speaker}，不要代替${roleLabel}发言。**回应以陈述收尾，不要向${roleLabel}追问或要求其补充回答**——用户在本环节没有再次发言的机会，追问会让问题悬空；需要追问的内容留到后面的"仲裁庭提问"环节。`
+          ? `用户（${roleLabel}）刚刚发言："${arg}"，请你以${speaker}的身份简短回应。注意：你只扮演${speaker}，不要代替${roleLabel}发言。**回应以陈述收尾，不要向${roleLabel}追问或要求其补充回答**——用户在本环节没有再次发言的机会，追问会让问题悬空；需要追问的内容留到后面的"${profile.tribunalQuestionStage}"环节。`
           : stageInstruction(arg);
-    const knowledge =
-      phase === 'investigation'
-        ? [ARB_OPENING_KNOWLEDGE, ARB_JURISDICTION_KNOWLEDGE, ARB_EVIDENCE_KNOWLEDGE, ARB_WITNESS_KNOWLEDGE]
-        : [ARB_CLOSING_KNOWLEDGE, ARB_JURISDICTION_KNOWLEDGE, ARB_EVIDENCE_KNOWLEDGE];
-    return `你正在模拟一场国际商事仲裁庭审（${pageName}）。你当前扮演的角色是"${speaker}"。
+    const knowledge = phase === 'investigation' ? profile.investigationKnowledge : profile.debateKnowledge;
+    return `你正在模拟一场${profile.hearingName}（${pageName}）。你当前扮演的角色是"${speaker}"。
 ${personText}
 ${intro}
 
-可获取的资料：案件基本资料、仲裁文书卷、证人与专家陈述笔录、证据材料、法律依据（见上下文）。${speaker === '证人' || speaker === '专家证人' ? '你只知道自己亲身经历或专业范围内的事实，不知道其他人的证言。' : ''}
+可获取的资料：案件基本资料、${profile.pleadLabel}、证人与专家陈述笔录、证据材料、法律依据（见上下文）。${speaker === '证人' || speaker.includes('专家') ? '你只知道自己亲身经历或专业范围内的事实，不知道其他人的证言。' : ''}
 
 请注意：
-- 发言须符合角色身份与仲裁庭审语境，各角色的字数与语言风格必须严格符合下方【仲裁庭审发言风格要求】（宣读法律文书、证据清单原文时按完整篇幅，不受此限）
+- 发言须符合角色身份与庭审语境，各角色的字数与语言风格必须严格符合下方【发言风格要求】（宣读法律文书、证据清单原文时按完整篇幅，不受此限）
 - 依据案件资料发言，不得编造案情之外的事实、金额、日期
 - 严禁代替其他角色发言，只扮演"${speaker}"这一个角色
 - 如果用户（${roleLabel}）提出明显偏离案件事实或法律规定的主张，不必顺着答，应指出差异并引导回到合法合理的论证路径
 
-以下是仲裁程序相关知识，供参考（具体条文号以仲裁规则文本为准，不要自行编造条文号）：
+以下是程序与法律适用相关知识，供参考（具体条文号以法律或规则原文为准，不要自行编造条文号）：
 
 ${knowledge.join('\n\n')}
 
-${phase === 'investigation' ? ARB_INVESTIGATION_STYLE : ARB_DEBATE_STYLE}`;
+${phase === 'investigation' ? profile.investigationStyle : profile.debateStyle}`;
   };
 
   const streamAIResponse = useCallback(async (prompt: string, speaker: string, playTts = true) => {
@@ -269,7 +262,7 @@ ${phase === 'investigation' ? ARB_INVESTIGATION_STYLE : ARB_DEBATE_STYLE}`;
     }
     // buildSystemPrompt 依赖 selectedCase/phase/roleLabel，这里随之重建
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contextData, phase, roleLabel, selectedCase]);
+  }, [contextData, phase, roleLabel, selectedCase, profile]);
 
   const advanceTo = useCallback((nextIdx: number, runAI: (i: number) => void, delay = 300) => {
     setCurrentStageIdx(nextIdx);
@@ -316,8 +309,7 @@ ${phase === 'investigation' ? ARB_INVESTIGATION_STYLE : ARB_DEBATE_STYLE}`;
     setInput('');
 
     // 回应者：阶段指定的 responder；没有则由对方代理人回应（自由辩论等）
-    const defaultResponder = role === 'prosecutor' ? '被申请人代理人' : role === 'defender' ? '申请人代理人' : '申请人代理人';
-    const responder = stage?.responder ?? defaultResponder;
+    const responder = stage?.responder ?? profile.opponentOf[role];
     await streamAIResponse(`${USER_SAYS}${text}`, responder, true);
     if (voiceModeRef.current) await waitForTtsQueueDrain(8);
     // 用户发言已被回应，打断语义消费完毕——复位，否则下一个 ai 阶段发言完会被误判为"用户打断"而假死
@@ -347,13 +339,13 @@ ${phase === 'investigation' ? ARB_INVESTIGATION_STYLE : ARB_DEBATE_STYLE}`;
     setShowContinueModal(true);
     setContinueLoading(true);
     const allRecords = learningRecords.map((r) => `${r.pageName}: ${r.summary}`).join('\n');
-    const summaryPrompt = `请根据以下国际商事仲裁${pageName}的学习过程，进行概括、评价和训练建议。学生扮演的角色是${roleLabel}。
+    const summaryPrompt = `请根据以下${profile.hearingName}中${pageName}的学习过程，进行概括、评价和训练建议。学生扮演的角色是${roleLabel}。
 
 案件资料:
 ${contextData}
 
-## 仲裁程序知识
-${phase === 'investigation' ? [ARB_OPENING_KNOWLEDGE, ARB_JURISDICTION_KNOWLEDGE, ARB_EVIDENCE_KNOWLEDGE, ARB_WITNESS_KNOWLEDGE].join('\n') : [ARB_CLOSING_KNOWLEDGE, ARB_EVIDENCE_KNOWLEDGE].join('\n')}
+## 程序与法律适用知识
+${(phase === 'investigation' ? profile.investigationKnowledge : profile.debateKnowledge).join('\n')}
 
 对话记录:
 ${messages.map((m) => `${m.speaker || m.role}: ${m.content}`).join('\n')}
@@ -364,7 +356,7 @@ ${allRecords}
 ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
     try {
       const data = await fetchSummarySections({
-        systemPrompt: '你是一位国际仲裁与国际民事诉讼法教授，负责对模拟仲裁庭审训练的学习过程进行总结评价。' + '\n\n' + STAGE_SUMMARY_FORMAT_INSTRUCTION,
+        systemPrompt: `你是一位${profile.professor}，负责对${profile.trainingName}的学习过程进行总结评价。` + '\n\n' + STAGE_SUMMARY_FORMAT_INSTRUCTION,
         userPrompt: summaryPrompt,
         temperature: 0.5,
         onChunk: (t) => setContinueStream(t),

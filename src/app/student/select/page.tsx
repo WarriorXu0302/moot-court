@@ -9,7 +9,7 @@ import type { CaseData, UserRole } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { Scale, Gavel, Shield, FileText, ChevronRight, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { parseScoringStandards } from '@/lib/scoring';
-import { CASE_TYPE_LABEL, ROLE_LABELS, ROLE_DESC, type CaseType } from '@/lib/case-type';
+import { CASE_TYPE_LABEL, ROLE_LABELS, ROLE_DESC, normalizeCaseType, type CaseType } from '@/lib/case-type';
 
 interface PersonalStats {
   id: string;
@@ -44,10 +44,11 @@ export default function SelectCasePage() {
   const [cases, setCases] = useState<CaseData[]>([]);
   const [typeFilter, setTypeFilter] = useState<'all' | CaseType>('all');
   // 角色名随当前选中案例类型变化；未选案例时按刑事显示（与原行为一致）
-  const activeCaseType: CaseType = selectedCase?.caseType === 'arbitration' ? 'arbitration' : 'criminal';
+  const activeCaseType: CaseType = normalizeCaseType(selectedCase?.caseType);
   const ROLE_INFO = roleInfoFor(activeCaseType);
-  const visibleCases = typeFilter === 'all' ? cases : cases.filter((c) => (c.caseType ?? 'criminal') === typeFilter);
-  const hasArbitration = cases.some((c) => c.caseType === 'arbitration');
+  const visibleCases = typeFilter === 'all' ? cases : cases.filter((c) => normalizeCaseType(c.caseType) === typeFilter);
+  // 目录里出现两种及以上类型时才显示筛选
+  const presentTypes = (['arbitration', 'civil', 'criminal'] as const).filter((t) => cases.some((c) => normalizeCaseType(c.caseType) === t));
   const [loading, setLoading] = useState(true);
   const [personalStats, setPersonalStats] = useState<PersonalStats[]>([]);
   const [statsExpanded, setStatsExpanded] = useState(false);
@@ -140,9 +141,9 @@ export default function SelectCasePage() {
         <aside className="flex shrink-0 flex-col border-b bg-card lg:w-[380px] lg:border-b-0 lg:border-r xl:w-[420px]">
           <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-4">
             <h2 className="font-display text-base font-semibold">案例目录</h2>
-            {hasArbitration && cases.some((c) => (c.caseType ?? 'criminal') === 'criminal') && (
+            {presentTypes.length > 1 && (
               <div className="flex gap-1">
-                {(['all', 'arbitration', 'criminal'] as const).map((t) => (
+                {(['all', ...presentTypes] as const).map((t) => (
                   <button
                     key={t}
                     type="button"
@@ -185,7 +186,7 @@ export default function SelectCasePage() {
                         <span className="min-w-0 flex-1">
                           <span className="line-clamp-2 text-sm font-medium leading-snug">{c.name}</span>
                           <span className={`mt-0.5 block text-xs ${active ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                            {CASE_TYPE_LABEL[c.caseType === 'arbitration' ? 'arbitration' : 'criminal']}
+                            {CASE_TYPE_LABEL[normalizeCaseType(c.caseType)]}
                             {done ? ` · 已训练 ${done.trainCount} 次` : ''}
                           </span>
                         </span>

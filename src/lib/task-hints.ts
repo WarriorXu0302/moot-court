@@ -201,11 +201,43 @@ export const TASK_HINTS: Record<string, TaskHintItem> = {
 /**
  * 根据页面路径获取任务提示
  */
-export function getTaskHint(pathname: string): TaskHintItem | null {
+/** 涉外民商事诉讼复用 arbitration-* 页面，提示文案单独一套 */
+const CIVIL_HINTS: Record<string, TaskHintItem> = {
+  'arbitration-hearing': {
+    title: '涉外民商事庭审',
+    tasks: [
+      '按庭审程序依次参与诉辩陈述、法律适用意见、举证质证、证人与外国法查明专家询问',
+      '轮到你的环节，输入发言（或切换语音模式按住说话），AI 角色会实时回应',
+      '发表法律适用意见时说明涉外因素、定性、冲突规范与连结点，再落到准据法',
+      '对 AI 引用的任何条文、条约、判例都要自行核查真实性',
+      '完成后点击「继续」查看本环节总结，或点击「跳过」进入下一环节',
+    ],
+  },
+  'arbitration-writing': {
+    title: '诉讼文书撰写',
+    tasks: [
+      '在中间文本框撰写文书，可随时向右侧 AI 指导请教思路与结构',
+      '起诉状、答辩状都要就准据法提出己方主张；判决书"本院认为"先说理法律适用',
+      '点击「评价」获取依据本环节评分标准的评分与改进建议',
+      'AI 给出的法律依据务必自行核验，不要直接照搬',
+    ],
+  },
+  'arbitration-closing': {
+    title: '宣判',
+    tasks: [
+      '点击按钮生成训练分析报告',
+      '报告包含概括、评价、建议与得分',
+      '确认后保存本次学习记录并返回案例选择页',
+    ],
+  },
+};
+
+export function getTaskHint(pathname: string, caseType?: string): TaskHintItem | null {
   // 从路径中提取页面标识，如 /student/case-detail → case-detail
   const match = pathname.match(/\/student\/([^/]+)/);
   if (match) {
     const key = match[1];
+    if (caseType === 'civil' && CIVIL_HINTS[key]) return CIVIL_HINTS[key];
     return TASK_HINTS[key] || null;
   }
   return null;

@@ -6,17 +6,25 @@
  */
 import type { UserRole } from './types';
 
-export type CaseType = 'criminal' | 'arbitration';
+export type CaseType = 'criminal' | 'arbitration' | 'civil';
+
+/** 对抗式民商事类型（仲裁 / 涉外民商事诉讼）：共用 arbitration-* 页面骨架，按类型切换角色、文书与流程，见 forum-profile.ts */
+export type AdversarialCaseType = 'arbitration' | 'civil';
+
+export function isAdversarial(t: unknown): t is AdversarialCaseType {
+  return t === 'arbitration' || t === 'civil';
+}
 
 export const DEFAULT_CASE_TYPE: CaseType = 'criminal';
 
 export const CASE_TYPE_LABEL: Record<CaseType, string> = {
   criminal: '刑事案件',
   arbitration: '国际商事仲裁',
+  civil: '涉外民商事诉讼',
 };
 
 export function normalizeCaseType(v: unknown): CaseType {
-  return v === 'arbitration' ? 'arbitration' : 'criminal';
+  return v === 'arbitration' || v === 'civil' ? v : 'criminal';
 }
 
 /** 仲裁案例专属元数据，存 cases.meta（jsonb） */
@@ -24,6 +32,8 @@ export interface ArbitrationMeta {
   rules: 'CIETAC' | 'ICC' | 'HKIAC' | 'UNCITRAL';
   /** 仲裁地 */
   seat: string;
+  /** 受案法院（涉外民商事诉讼用；仲裁为空） */
+  court?: string;
   /** 实体准据法 */
   governingLaw: string;
   /** 第一期仅 zh，bilingual 预留 */
@@ -76,6 +86,7 @@ export function parseArbitrationMeta(raw: unknown): ArbitrationMeta | undefined 
   return {
     rules: ARBITRATION_RULES.includes(o.rules as ArbitrationMeta['rules']) ? (o.rules as ArbitrationMeta['rules']) : 'CIETAC',
     seat: typeof o.seat === 'string' ? o.seat : '',
+    court: typeof o.court === 'string' ? o.court : undefined,
     governingLaw: typeof o.governingLaw === 'string' ? o.governingLaw : '',
     language: o.language === 'en' || o.language === 'bilingual' ? o.language : 'zh',
     claimAmount: typeof o.claimAmount === 'string' ? o.claimAmount : '',
@@ -88,17 +99,20 @@ export function parseArbitrationMeta(raw: unknown): ArbitrationMeta | undefined 
 export const ROLE_LABELS: Record<CaseType, Record<UserRole, string>> = {
   criminal: { judge: '审判长', prosecutor: '公诉人', defender: '辩护人' },
   arbitration: { judge: '首席仲裁员', prosecutor: '申请人代理人', defender: '被申请人代理人' },
+  civil: { judge: '审判长', prosecutor: '原告代理人', defender: '被告代理人' },
 };
 
 export const ROLE_DESC: Record<CaseType, Record<UserRole, string>> = {
   criminal: { judge: '主持庭审', prosecutor: '指控犯罪', defender: '为被告人辩护' },
   arbitration: { judge: '主持仲裁程序、合议并作出裁决', prosecutor: '提出仲裁请求、举证论证', defender: '答辩、管辖权异议、反请求' },
+  civil: { judge: '主持庭审、确定准据法并作出判决', prosecutor: '提出诉讼请求、论证法律适用', defender: '答辩、管辖异议、法律适用抗辩' },
 };
 
 /** 其他庭审参与方的展示名（AI 扮演） */
 export const PARTICIPANT_LABELS: Record<CaseType, { defendant: string; victim: string; witness: string; clerk: string; extra?: string }> = {
   criminal: { defendant: '被告人', victim: '被害人', witness: '证人', clerk: '书记员' },
   arbitration: { defendant: '被申请人', victim: '证人', witness: '证人', clerk: '仲裁秘书', extra: '专家证人' },
+  civil: { defendant: '被告', victim: '证人', witness: '证人', clerk: '书记员', extra: '外国法查明专家' },
 };
 
 /** 案件文书/卷宗字段在不同类型下的展示名（列名不变，仅语义不同） */
@@ -133,6 +147,16 @@ export const CASE_LABELS: Record<CaseType, CaseLabels> = {
     law: '仲裁规则与法律依据',
     verdict: '裁决书',
     courtName: '仲裁庭',
+  },
+  civil: {
+    indictment: '民事起诉状',
+    defense: '答辩状',
+    prosecution: '原告代理词',
+    victim: '证人/专家陈述',
+    plan: '庭审提纲',
+    law: '冲突规范与法律依据',
+    verdict: '民事判决书',
+    courtName: '法庭',
   },
 };
 

@@ -19,7 +19,10 @@ const STUDENT_FIELDS: Record<string, string> = {
   profile: '案件基本介绍', teach: '训练价值', plead: '卷宗 · 诉讼文书', record: '卷宗 · 询问笔录',
   evidence: '卷宗 · 证据材料', law: '相关法条', wrong: '易错点', person: '角色设定',
 };
-const REQUIRED_ROLES = ['申请人代理人', '被申请人代理人', '首席仲裁员', '边裁', '事实证人', '专家证人', '仲裁秘书'];
+const REQUIRED_ROLES: Record<string, string[]> = {
+  arbitration: ['申请人代理人', '被申请人代理人', '首席仲裁员', '边裁', '证人', '专家证人', '仲裁秘书'],
+  civil: ['原告代理人', '被告代理人', '审判长', '证人', '外国法查明专家', '书记员'],
+};
 const VERDICT_WORDS = ['本案应认定', '应当认定', '法院认为', '最高人民法院认为', '本院认为', '裁定如下', '判决如下', '因此无效', '因此有效', '应予承认', '不予承认', '应予驳回'];
 
 const norm = (s: string) => s.replace(/\r/g, '').replace(/[\s　]/g, '').replace(/[，,]/g, ',');
@@ -89,11 +92,12 @@ function flatten(json: string): string {
 }
 
 async function main() {
-  const book = JSON.parse(fs.readFileSync('/var/tmp/step0/book/cases.json', 'utf8')) as BookCase[];
+  // 书稿解析结果（见 scripts/parse-book.py）；教材原文按 meta.reference.source 中的"章·知识点"或案情原文对应
+  const book = JSON.parse(fs.readFileSync(process.env.BOOK_JSON ?? '/var/tmp/book2/cases2.json', 'utf8')) as (BookCase & { chapter: string })[];
   const db = getSupabaseClient();
   const { data, error } = await db.from('cases')
-    .select('id,name,status,profile,teach,case_info,plead,record,evidence,law,wrong,person,judge,meta')
-    .eq('case_type', 'arbitration').eq('creator_name', '教材导入');
+    .select('id,name,status,case_type,profile,teach,case_info,plead,record,evidence,law,wrong,person,judge,meta')
+    .eq('creator_name', '教材导入');
   if (error) throw error;
 
   const lines: string[] = [];
@@ -110,8 +114,10 @@ async function main() {
 
   const summary: string[] = [];
   for (const c of (data ?? []).sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh'))) {
+    // 先按案情原文精确对应（导入时 case_info 即教材案情），旧版导入的 6 个仲裁案例再按名称关键词兜底
     const key = MATCH_KEYS.find((k) => c.name.includes(k));
-    const b = key ? book.filter((x) => x.facts && x.holding).find((x) => (x.caseName || x.title).includes(key)) : undefined;
+    const b = book.find((x) => norm(x.facts) === norm(String(c.case_info ?? '')))
+      ?? (key ? book.find((x) => (x.caseName || x.title).includes(key)) : undefined);
     const source = b ? [b.facts, b.issues, b.holding, b.analysis].join('\n') : String(c.case_info ?? '');
     const srcN = canon(source);
     const answer = b ? `${b.holding}\n${b.analysis}` : '';
@@ -130,7 +136,7 @@ async function main() {
     }
 
     const personText = String(c.person ?? '');
-    const missingRoles = REQUIRED_ROLES.filter((r) => !personText.includes(r));
+    const missingRoles = (REQUIRED_ROLES[String(c.case_type)] ?? REQUIRED_ROLES.arbitration).filter((r) => !personText.includes(r));
     const counts = { plead: countItems(String(c.plead ?? '')), record: countItems(String(c.record ?? '')), evidence: countItems(String(c.evidence ?? '')), law: countItems(String(c.law ?? '')) };
     const hasScoring = !!c.judge && String(c.judge).length > 20;
     const caseInfoMatches = b ? norm(String(c.case_info ?? '')) === norm(b.facts) : false;

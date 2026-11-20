@@ -41,7 +41,8 @@ import { LawSearchButton } from '@/components/law-search';
 import { interruptTts } from '@/lib/audio';
 import { stripLifecycleTag } from '@/lib/lifecycle-utils';
 import { mergeStageRecords } from '@/lib/learning-log';
-import { getRoleLabel } from '@/lib/case-type';
+import { getRoleLabel, normalizeCaseType, isAdversarial } from '@/lib/case-type';
+import { getForumProfile } from '@/lib/forum-profile';
 import { TrainingProgress } from '@/components/training-progress';
 import { DisplayMenu } from '@/components/page-header';
 
@@ -84,7 +85,7 @@ export function TitleBar({
   );
 
   // 角色名随案件类型：仲裁案例显示"申请人代理人"等，而不是刑事的"公诉人"
-  const caseType = selectedCase?.caseType === 'arbitration' ? 'arbitration' : 'criminal';
+  const caseType = normalizeCaseType(selectedCase?.caseType);
   const roleLabel = selectedRole ? getRoleLabel(caseType, selectedRole) : '未选择';
 
   const handleContinue = () => {
@@ -101,10 +102,11 @@ export function TitleBar({
   };
 
   // 文书 key 与各写作页 setDocument 的 key 对应：刑事沿用原 key；仲裁页用 claim / answer / award
-  const docTypes: Record<string, string> = caseType === 'arbitration'
-    ? (selectedRole === 'prosecutor' ? { claim: '仲裁申请书' }
-      : selectedRole === 'defender' ? { answer: '答辩状（含反请求）' }
-      : selectedRole === 'judge' ? { award: '裁决书' }
+  const forumDocs = isAdversarial(caseType) ? getForumProfile(caseType).docs : null;
+  const docTypes: Record<string, string> = forumDocs
+    ? (selectedRole === 'prosecutor' ? { claim: forumDocs.claim.title }
+      : selectedRole === 'defender' ? { answer: forumDocs.answer.title }
+      : selectedRole === 'judge' ? { award: forumDocs.award.title }
       : {})
     : selectedRole === 'defender'
     ? { defense: '辩护词' }
@@ -303,7 +305,7 @@ export function TitleBar({
               </div>
             ) : Object.entries(docTypes).length === 0 || Object.entries(docTypes).every(([, _]) => false) ? (
               <div className="text-center text-muted-foreground py-8">
-                {caseType === 'arbitration' ? '请先在对应环节撰写并保存文书后查看' : selectedRole === 'defender' ? '请先撰写辩护词后查看' : selectedRole === 'prosecutor' ? '请先撰写起诉书和公诉意见书后查看' : selectedRole === 'judge' ? '请先撰写庭审提纲后查看' : '暂无文书'}
+                {isAdversarial(caseType) ? '请先在对应环节撰写并保存文书后查看' : selectedRole === 'defender' ? '请先撰写辩护词后查看' : selectedRole === 'prosecutor' ? '请先撰写起诉书和公诉意见书后查看' : selectedRole === 'judge' ? '请先撰写庭审提纲后查看' : '暂无文书'}
               </div>
             ) : (
               Object.entries(docTypes).map(([key, label]) => {

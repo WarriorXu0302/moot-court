@@ -20,6 +20,7 @@ import { CaseFileViewer } from '@/components/case-file-viewer';
 
 import { CaseReviewPanel } from '@/components/case-review-panel';
 import { PageHeader } from '@/components/page-header';
+import { CASE_TYPE_LABEL, normalizeCaseType, isAdversarial } from '@/lib/case-type';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -204,7 +205,7 @@ function CaseDetailContent() {
       // 首次发布才触发法律文书工作流。仲裁案例跳过：该工作流是刑事专用（起诉书/辩护词/公诉意见书/庭审提纲），
       // 会用刑事内容覆盖仲裁案例的 indictment/defense/prosecution/person 等列；
       // 仲裁案例的申请书、答辩状已在案例生成时写入文书卷（plead），学生端撰写时再评价。
-      const isFirstPublish = (data.status === 'generated' || data.status === 'offline') && data.caseType !== 'arbitration';
+      const isFirstPublish = (data.status === 'generated' || data.status === 'offline') && !isAdversarial(data.caseType);
 
       const res = await fetch('/api/cases', {
         method: 'POST',
@@ -345,7 +346,7 @@ function CaseDetailContent() {
         back="/teacher"
         backLabel="工作台"
         title={data.name || '未命名案例'}
-        subtitle={`${data.caseType === 'arbitration' ? '国际商事仲裁' : '刑事案件'} · ${data.status === 'published' ? '已发布' : data.status === 'offline' ? '已下线' : '待审核'}`}
+        subtitle={`${CASE_TYPE_LABEL[normalizeCaseType(data.caseType)]} · ${data.status === 'published' ? '已发布' : data.status === 'offline' ? '已下线' : '待审核'}`}
         badge={editing ? <Badge variant="secondary">编辑中</Badge> : undefined}
         actions={
           <>

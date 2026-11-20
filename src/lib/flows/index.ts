@@ -1,5 +1,6 @@
 import { CRIMINAL_FLOWS } from './criminal';
 import { ARBITRATION_FLOWS } from './arbitration';
+import { CIVIL_FLOWS } from './civil';
 import type { FlowCaseType, FlowPhase, FlowRole, StageDef } from './types';
 
 export type { StageDef, FlowCaseType, FlowPhase, FlowRole } from './types';
@@ -7,6 +8,7 @@ export type { StageDef, FlowCaseType, FlowPhase, FlowRole } from './types';
 const FLOWS: Record<FlowCaseType, Record<FlowPhase, Record<FlowRole, StageDef[]>>> = {
   criminal: CRIMINAL_FLOWS,
   arbitration: ARBITRATION_FLOWS,
+  civil: CIVIL_FLOWS,
 };
 
 /**

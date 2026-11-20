@@ -10,7 +10,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkCjkFriendly from 'remark-cjk-friendly';
 import type { CaseData, UserRole } from '@/lib/types';
-import { getRoleLabel } from '@/lib/case-type';
+import { getRoleLabel, normalizeCaseType, isAdversarial } from '@/lib/case-type';
 import { describeArbitrationMeta } from '@/lib/arbitration-case-utils';
 
 interface FloatingAssistantProps {
@@ -42,8 +42,10 @@ export function FloatingAssistant({ pageContext }: FloatingAssistantProps) {
     }
   }, [messages, isStreaming]);
 
-  const isArbitration = selectedCase?.caseType === 'arbitration';
-  const roleLabel = selectedRole ? getRoleLabel(isArbitration ? 'arbitration' : 'criminal', selectedRole) : '学生';
+  const caseType = normalizeCaseType(selectedCase?.caseType);
+  const isArbitration = isAdversarial(caseType);
+  const isCivil = caseType === 'civil';
+  const roleLabel = selectedRole ? getRoleLabel(caseType, selectedRole) : '学生';
 
   const buildSystemPrompt = useCallback(() => {
     const caseData = selectedCase;
@@ -51,9 +53,9 @@ export function FloatingAssistant({ pageContext }: FloatingAssistantProps) {
       `案件名称: ${caseData.name || ''}`,
       `案件基本介绍: ${caseData.profile || ''}`,
       `训练价值: ${caseData.teach || ''}`,
-      `仲裁基本信息: ${describeArbitrationMeta(caseData)}`,
+      `${isCivil ? '案件基本信息' : '仲裁基本信息'}: ${describeArbitrationMeta(caseData)}`,
       `案件基本资料: ${caseData.case || ''}`,
-      `仲裁文书卷: ${caseData.plead || ''}`,
+      `${isCivil ? '诉讼文书卷' : '仲裁文书卷'}: ${caseData.plead || ''}`,
       `证人与专家陈述笔录: ${caseData.record || ''}`,
       `证据材料: ${caseData.evidence || ''}`,
       `法律依据: ${caseData.law || ''}`,
@@ -72,7 +74,7 @@ export function FloatingAssistant({ pageContext }: FloatingAssistantProps) {
       selectedRole === 'judge' ? `庭审提纲: ${caseData.plan || ''}` : '',
     ].filter(Boolean).join('\n') : '';
 
-    return `你是一个常驻的${isArbitration ? '模拟国际仲裁' : '模拟法庭'}AI助手，服务于${roleLabel}角色。${isArbitration ? '\n涉及条文号、条约、判例时：只引用你有把握的内容，不确定时请直接提示"请以法律或规则原文核对"，严禁编造；也不要替学生给出本案的最终结论，应引导学生自己论证。' : ''}
+    return `你是一个常驻的${isCivil ? '涉外民商事诉讼模拟' : isArbitration ? '模拟国际仲裁' : '模拟法庭'}AI助手，服务于${roleLabel}角色。${isArbitration ? '\n涉及条文号、条约、判例时：只引用你有把握的内容，不确定时请直接提示"请以法律或规则原文核对"，严禁编造；也不要替学生给出本案的最终结论，应引导学生自己论证。' : ''}
 
 ## 重要原则：可行性评估与风险提示
 当用户提出明显偏离案件事实或法律规定的假设时，你不必直接顺着用户的思路给答案。你应该：
@@ -93,7 +95,7 @@ ${caseContext}
 - 如果有程序瑕疵信息，提醒用户注意相关风险
 - 保持专业、严谨，但语言要清晰易懂
 - 回答要结合具体案件事实和法律条文，避免空泛`;
-  }, [selectedCase, selectedRole, roleLabel, pageContext, isArbitration]);
+  }, [selectedCase, selectedRole, roleLabel, pageContext, isArbitration, isCivil]);
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isStreaming) return;

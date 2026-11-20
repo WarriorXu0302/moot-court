@@ -5,7 +5,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { buildScoringGenerationPrompt } from '@/lib/scoring';
 import { buildArbitrationScoringPrompt } from '@/lib/arbitration-scoring';
 import { ensureLawComplete } from '@/lib/law-quality';
-import { normalizeCaseType, parseArbitrationMeta, EMPTY_ARBITRATION_META } from '@/lib/case-type';
+import { normalizeCaseType, parseArbitrationMeta, EMPTY_ARBITRATION_META, isAdversarial } from '@/lib/case-type';
 import { requireLogin, requireTeacher } from '@/lib/api-auth';
 import { buildArbitrationCasePrompt, parseArbitrationCaseOutput } from '@/lib/arbitration-case-prompt';
 
@@ -181,9 +181,10 @@ export async function POST(request: NextRequest) {
         teach: caseRow.teach as string | null,
         case_info: caseRow.case_info as string | null,
       };
+      const rowType = normalizeCaseType((caseRow as Record<string, unknown>).case_type);
       const prompt =
-        normalizeCaseType((caseRow as Record<string, unknown>).case_type) === 'arbitration'
-          ? buildArbitrationScoringPrompt({ ...scoringInput, meta: parseArbitrationMeta((caseRow as Record<string, unknown>).meta) ?? null })
+        isAdversarial(rowType)
+          ? buildArbitrationScoringPrompt({ ...scoringInput, caseType: rowType, meta: parseArbitrationMeta((caseRow as Record<string, unknown>).meta) ?? null })
           : buildScoringGenerationPrompt(scoringInput);
 
       // 调用 LLM 生成评分标准（累积流式输出）
@@ -294,7 +295,7 @@ export async function POST(request: NextRequest) {
       const cd = body.caseData;
       // 落库前确保司法解释条目带正文（工作流长输出可能只给标题）
       const saveHeaders = HeaderUtils.extractForwardHeaders(request.headers);
-      const saveIsArb = normalizeCaseType(cd.caseType ?? body.caseType) === 'arbitration';
+      const saveIsArb = isAdversarial(normalizeCaseType(cd.caseType ?? body.caseType));
       const completedLaw = cd.law ? (saveIsArb ? cd.law : await ensureLawComplete(cd.law, saveHeaders)) : null;
       const { data, error } = await client
         .from('cases')
@@ -452,10 +453,11 @@ async function isArbitrationCase(
   id: unknown,
   declared: unknown,
 ): Promise<boolean> {
-  if (declared !== undefined && declared !== null) return normalizeCaseType(declared) === 'arbitration';
+  // 涉外民商事诉讼与仲裁同样跳过刑事专用的法条补全与文书工作流
+  if (declared !== undefined && declared !== null) return isAdversarial(normalizeCaseType(declared));
   if (typeof id !== 'string' || !id) return false;
   const { data } = await client.from('cases').select('*').eq('id', id).maybeSingle();
-  return normalizeCaseType((data as Record<string, unknown> | null)?.case_type) === 'arbitration';
+  return isAdversarial(normalizeCaseType((data as Record<string, unknown> | null)?.case_type));
 }
 
 /**
@@ -468,7 +470,7 @@ function caseTypeColumns(caseType: unknown, meta: unknown, force = false): Recor
   const type = normalizeCaseType(caseType);
   if (type === 'criminal' && !force) return {};
   const cols: Record<string, unknown> = { case_type: type };
-  if (type === 'arbitration') {
+  if (isAdversarial(type)) {
     cols.meta = parseArbitrationMeta(meta) ?? EMPTY_ARBITRATION_META;
   } else if (force) {
     cols.meta = null;
@@ -479,7 +481,7 @@ function caseTypeColumns(caseType: unknown, meta: unknown, force = false): Recor
 // Helper: Map DB row to CaseData
 function rowToCaseData(row: Record<string, unknown>, opts: { forStudent?: boolean } = {}) {
   const caseType = normalizeCaseType(row.case_type);
-  const metaParsed = caseType === 'arbitration' ? parseArbitrationMeta(row.meta) : undefined;
+  const metaParsed = isAdversarial(caseType) ? parseArbitrationMeta(row.meta) : undefined;
   // 学生不得看到标准答案（裁判要旨 / 法理分析）。在服务端剪掉，而不是靠前端不渲染——
   // 前端不渲染仍然会让答案出现在网络响应里，F12 就能看到。
   const meta = metaParsed && opts.forStudent ? { ...metaParsed, reference: undefined } : metaParsed;

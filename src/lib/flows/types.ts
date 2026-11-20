@@ -7,7 +7,7 @@
  */
 
 /** 案件类型。与 src/lib/case-type.ts 的 CaseType 一致 */
-export type FlowCaseType = 'criminal' | 'arbitration';
+export type FlowCaseType = 'criminal' | 'arbitration' | 'civil';
 
 /** 内部角色（与 UserRole 一致，展示层再按案件类型映射） */
 export type FlowRole = 'judge' | 'prosecutor' | 'defender';
