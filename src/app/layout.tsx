@@ -7,11 +7,11 @@ import { AuthSync } from '@/components/auth-sync';
 
 export const metadata: Metadata = {
   title: {
-    default: '模拟法庭教学系统',
-    template: '%s | 模拟法庭教学系统',
+    default: '国际法实训平台',
+    template: '%s | 国际法实训平台',
   },
-  description: '教师端与学生端打通的模拟法庭训练平台，支持法庭调查、法庭辩论等全流程模拟训练。',
-  keywords: ['模拟法庭', '法律教育', '法庭辩论', '实践教学'],
+  description: '面向国际法方向的实训平台：以国际私法真实案例为卷宗，模拟涉外民商事诉讼与国际商事仲裁的全流程。',
+  keywords: ['国际私法', '涉外民商事诉讼', '国际商事仲裁', '模拟法庭', '实践教学'],
   authors: [{ name: 'Court Simulation' }],
   robots: {
     index: true,

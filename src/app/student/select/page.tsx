@@ -249,7 +249,7 @@ export default function SelectCasePage() {
           {!selectedCase ? (
             <div className="hidden h-full min-h-[320px] flex-col items-center justify-center gap-2 px-6 text-center lg:flex">
               <p className="font-display text-xl text-foreground">在案例目录里选一个案例</p>
-              <p className="max-w-sm text-sm text-muted-foreground">每个案例都来自真实裁判，你会先研读案情，再以一方代理人或首席仲裁员的身份完成整个程序。</p>
+              <p className="max-w-sm text-sm text-muted-foreground">每个案例都来自真实裁判。你会先研读案情，再以当事人代理人、审判长或首席仲裁员的身份走完整个程序。</p>
             </div>
           ) : (
             <div className="mx-auto max-w-3xl px-5 py-8 lg:px-10">

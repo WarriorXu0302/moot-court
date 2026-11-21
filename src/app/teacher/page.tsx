@@ -636,7 +636,7 @@ function TeacherPageContent() {
           <div className="absolute inset-0 w-16 h-16 rounded-full border-[3px] border-transparent border-t-primary animate-spin" />
           <Scale className="h-7 w-7 absolute inset-0 m-auto text-primary/60" />
         </div>
-        <h2 className="text-lg font-semibold text-foreground mb-1">模拟法庭教学系统</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-1">国际法实训平台</h2>
         <p className="text-sm text-muted-foreground mb-6">正在进入教师管理端...</p>
         <div className="w-48 h-1 rounded-full bg-muted overflow-hidden">
           <div className="h-full bg-primary rounded-full teacher-loading-bar" />

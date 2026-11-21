@@ -52,6 +52,15 @@ export interface ForumProfile {
   docs: Record<ArbitrationDoc, DocConfig>;
   /** 写作页的三个快捷提问 */
   quickQuestions: (docTitle: string) => string[];
+  /** 庭审页语音模式的庭室布局（座位名必须与 flows 里的 speaker 一致，才能高亮当前发言人） */
+  courtroom: {
+    /** 审判席 / 仲裁庭席，中间为主持者 */
+    bench: [string, string, string];
+    clerk: string;
+    left: { seat: string; caption: string };
+    right: { seat: string; caption: string };
+    witnesses: string[];
+  };
   /** 闭庭页 */
   closing: {
     pageRecord: string;
@@ -107,6 +116,13 @@ const ARBITRATION: ForumProfile = {
     },
   },
   quickQuestions: (t) => [`${t}应该包括哪些部分？`, '本案的管辖权争点应该怎么组织论证？', '请帮我检查请求事项写得是否具体可执行'],
+  courtroom: {
+    bench: ['边裁甲', '首席仲裁员', '边裁乙'],
+    clerk: '仲裁秘书',
+    left: { seat: '申请人代理人', caption: '申请人' },
+    right: { seat: '被申请人代理人', caption: '被申请人' },
+    witnesses: ['证人', '专家证人'],
+  },
   closing: {
     pageRecord: '仲裁闭庭',
     title: '仲裁庭审结束',
@@ -161,6 +177,13 @@ const CIVIL: ForumProfile = {
     },
   },
   quickQuestions: (t) => [`${t}应该包括哪些部分？`, '本案的准据法应该怎么论证？', '请帮我检查诉讼请求写得是否具体可执行'],
+  courtroom: {
+    bench: ['审判员', '审判长', '审判员'],
+    clerk: '书记员',
+    left: { seat: '原告代理人', caption: '原告' },
+    right: { seat: '被告代理人', caption: '被告' },
+    witnesses: ['证人', '外国法查明专家'],
+  },
   closing: {
     pageRecord: '宣判',
     title: '庭审结束',

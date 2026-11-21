@@ -207,7 +207,7 @@ ${caseContext}
               <div className="text-center py-8">
                 <Scale className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  我是你的模拟法庭AI助手，可以读取全案卷宗，结合你当前的{roleLabel}角色和训练页面提供指导。
+                  我是你的实训 AI 助手，可以读取全案卷宗，结合你当前的{roleLabel}角色和训练页面提供指导。
                 </p>
               </div>
             ) : (

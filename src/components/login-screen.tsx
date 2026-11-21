@@ -162,14 +162,14 @@ export default function LoginScreen({ session }: LoginScreenProps) {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* 左：卷宗封面式构图。竖排衬线标题 + 朱砂印章是唯一的强调，下面是真实的训练路线，不再堆叠金边、角饰与摆动天平 */}
       <div className="relative flex min-h-[340px] flex-col justify-between overflow-hidden bg-[#1C2830] px-8 py-10 text-[#E9EEF0] lg:min-h-screen lg:w-[46%] lg:px-14 lg:py-14">
-        <p className="text-sm text-[#9FB2BC]">国际民事诉讼与仲裁 · 实训课程</p>
+        <p className="text-sm text-[#9FB2BC]">国际私法 · 国际民事诉讼与仲裁 · 实训课程</p>
 
         <div className="flex items-start gap-8 lg:gap-12">
           <h1
             className="font-display text-[2.6rem] font-semibold leading-[1.15] tracking-[0.18em] text-[#F4F6F7] lg:text-[3.4rem]"
             style={{ writingMode: 'vertical-rl' }}
           >
-            模拟仲裁庭
+            国际法实训
           </h1>
           <div className="pt-1">
             {/* 朱砂印：方形、略微倾斜，像盖在卷宗封面上的章 */}
@@ -180,13 +180,13 @@ export default function LoginScreen({ session }: LoginScreenProps) {
               <span>实</span><span>模</span><span>训</span><span>拟</span>
             </div>
             <p className="mt-6 max-w-[17rem] text-[0.95rem] leading-relaxed text-[#C9D5DB]">
-              以教材真实案例为卷宗，扮演申请人代理人、被申请人代理人或首席仲裁员，走完一次完整的仲裁程序。
+              以《中国国际私法经典案例评析》中的真实裁判为卷宗，在涉外民商事诉讼或国际商事仲裁中扮演当事人代理人、审判长或首席仲裁员，走完从研读案情到裁判的完整程序。
             </p>
           </div>
         </div>
 
         <ol className="grid grid-cols-2 gap-x-6 gap-y-2 border-t border-white/10 pt-5 text-sm text-[#9FB2BC] sm:grid-cols-4">
-          {['研读案情', '撰写文书', '开庭审理', '裁决与复盘'].map((step, i) => (
+          {['研读案情', '撰写文书', '开庭审理', '裁判与复盘'].map((step, i) => (
             <li key={step} className="flex items-baseline gap-2">
               <span className="font-display text-base text-[#E9EEF0] tabular-nums">{i + 1}</span>
               {step}

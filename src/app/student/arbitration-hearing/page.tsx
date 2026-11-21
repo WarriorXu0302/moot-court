@@ -25,6 +25,7 @@ import remarkCjkFriendly from 'remark-cjk-friendly';
 import { TitleBar } from '@/components/title-bar';
 import { ContinueModal } from '@/components/continue-modal';
 import { CaseFileViewer } from '@/components/case-file-viewer';
+import { CourtroomDiagram } from '@/components/courtroom-diagram';
 import { LifecycleBar } from '@/components/lifecycle-bar';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Button } from '@/components/ui/button';
@@ -402,23 +403,12 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
           <ResizablePanel defaultSize={66} minSize={30}>
             <div className="flex flex-col overflow-hidden h-full border-r">
               {voiceMode ? (
-                <div className="relative flex-1 overflow-hidden bg-cover bg-center bg-muted" style={{ backgroundImage: 'url(/characters/judge.png)' }}>
-                  {(isStreaming || ttsSpeaker) && (
-                    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
-                      <div className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary text-primary-foreground shadow-lg">
-                        <span className="w-2.5 h-2.5 rounded-full bg-primary-foreground animate-pulse" />
-                        <span className="text-base font-semibold">{speakerNow} 正在发言</span>
-                      </div>
-                    </div>
-                  )}
-                  {!isStreaming && !ttsSpeaker && currentStage?.speaker && (
-                    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
-                      <div className="px-4 py-1.5 rounded-full bg-card/70 backdrop-blur shadow text-sm text-muted-foreground">{currentStage.speaker}</div>
-                    </div>
-                  )}
+                <div className="relative flex-1 overflow-hidden">
+                  {/* 庭室示意：原先是刑事法庭背景图（桌牌写公诉人、辩护人），与仲裁/民商事庭审不符 */}
+                  <CourtroomDiagram layout={profile.courtroom} active={speakerNow} self={roleLabel} title={caseType === 'civil' ? '涉外民商事法庭' : '仲裁庭'} />
                   {currentStage?.type === 'interactive' && !isStreaming && (
-                    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20">
-                      <div className="px-5 py-2.5 rounded-full bg-primary/90 backdrop-blur shadow-lg text-sm font-medium text-center text-primary-foreground">
+                    <div className="absolute bottom-4 left-1/2 w-[min(36rem,90%)] -translate-x-1/2 z-20">
+                      <div className="rounded-md bg-primary px-5 py-2.5 text-center text-sm font-medium text-primary-foreground shadow-lg">
                         {currentStage.hint || `请作为${roleLabel}发言`}
                       </div>
                     </div>
