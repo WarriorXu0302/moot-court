@@ -40,11 +40,24 @@ export interface ArbitrationMeta {
   language: 'zh' | 'en' | 'bilingual';
   claimAmount: string;
   issues: { id: string; title: string; type: 'jurisdiction' | 'merits' | 'quantum' | 'procedure' }[];
+  /** 涉及领域（选案页展示，帮助学生按领域挑案例），如「国际民事诉讼」「不方便法院原则」「借款合同」 */
+  keywords?: string[];
+  /**
+   * 案件基本资料的大纲（逐字取自 case_info，只做切分不改写），案情研读页按「阶段 → 小节」折叠显示。
+   * 由 scripts/structure-cases.ts 生成；缺失时页面回落为整段原文。
+   */
+  outline?: CaseOutlineStage[];
   /**
    * 教师专属参考资料（标准答案与出处）。**学生接口必须剪掉此字段**（见 api/cases 的 stripTeacherOnly）：
    * 裁判要旨与法理分析就是本案的答案，学生可见则训练失去意义。
    */
   reference?: CaseReference;
+}
+
+export interface CaseOutlineStage {
+  /** 如「一审阶段」「二审阶段」「再审阶段」；无程序分段的案例为「案情」 */
+  stage: string;
+  sections: { title: string; kind: 'facts' | 'procedure' | 'plaintiff' | 'defendant' | 'ruling' | 'other'; text: string }[];
 }
 
 export interface CaseReference {
@@ -91,6 +104,8 @@ export function parseArbitrationMeta(raw: unknown): ArbitrationMeta | undefined 
     language: o.language === 'en' || o.language === 'bilingual' ? o.language : 'zh',
     claimAmount: typeof o.claimAmount === 'string' ? o.claimAmount : '',
     issues: Array.isArray(o.issues) ? o.issues.filter((i) => i && typeof i.title === 'string') : [],
+    keywords: Array.isArray(o.keywords) ? o.keywords.filter((k): k is string => typeof k === 'string' && k.trim().length > 0) : undefined,
+    outline: Array.isArray(o.outline) ? o.outline.filter((st) => st && typeof st.stage === 'string' && Array.isArray(st.sections)) : undefined,
     reference: o.reference && typeof o.reference === 'object' ? (o.reference as CaseReference) : undefined,
   };
 }

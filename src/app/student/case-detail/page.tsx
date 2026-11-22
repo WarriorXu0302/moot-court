@@ -200,6 +200,10 @@ export default function CaseDetailPage() {
       ];
 
   const lawList = parseStringArray(caseData?.law);
+  const caseOutline = caseData?.meta?.outline;
+  const caseOutlineSections: CaseFileSection[] | null = caseOutline && caseOutline.length > 0
+    ? caseOutline.map((st) => ({ label: st.stage, items: st.sections.map((sec) => ({ title: sec.title, book: sec.text })) }))
+    : null;
 
   const contextData = isArbitration
     ? buildArbitrationContext(caseData)
@@ -517,6 +521,20 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
           <>
           <ResizablePanel defaultSize={33} minSize={20}>
             <div className="border-r overflow-hidden flex flex-col h-full">
+          {caseOutlineSections ? (
+            // 大纲模式：阶段（一审 / 二审…）→ 小节（基本案情 / 程序经过 / 原被告意见 / 裁判），与右侧卷宗同一交互；
+            // 正文逐字取自案件基本资料，只是切分（见 scripts/structure-cases.ts）
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+              <CaseFileViewer
+                sections={caseOutlineSections}
+                title="案件基本资料"
+                highlightConfig={highlightConfig}
+                currentRole={selectedRole || undefined}
+                defaultOpenKey={`0-${caseOutlineSections[0]?.items[0]?.title ?? ''}`}
+              />
+            </div>
+          ) : (
+          <>
           <div className="panel-head px-3 py-2">
             <h3 className="font-semibold text-sm">案件基本资料</h3>
           </div>
@@ -531,6 +549,8 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
               </div>
             </div>
           </div>
+          </>
+          )}
 
           {/* Law section */}
           <div className="border-t">

@@ -71,7 +71,13 @@ export function TitleBar({
   showSettings = true,
   isStudent = false,
 }: TitleBarProps) {
-  const { learningRecords, stageDialogues, behaviorLog, appendBehavior, selectedRole, selectedCase, documents, setDocument, user, logout, lifecycleVisible, toggleLifecycleVisible } = useAppStore();
+  const { learningRecords, stageDialogues, behaviorLog, appendBehavior, selectedRole, selectedCase, documents, setDocument, user, logout, lifecycleVisible, toggleLifecycleVisible, resetSession, setTrainingStartTime } = useAppStore();
+  // "已开始学习"：有环节点评、任何一次本人发言（对话里的 user 消息）、或保存过非空文书。
+  // 仅浏览案情、展开卷宗、跳过环节不算开始。
+  const hasStarted =
+    learningRecords.length > 0 ||
+    stageDialogues.some((d) => d.conversations.some((m) => m.role === 'user')) ||
+    Object.values(documents).some((v) => typeof v === 'string' && v.trim().length > 0);
   const router = useRouter();
   const [showRecords, setShowRecords] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
@@ -189,6 +195,25 @@ export function TitleBar({
           </DropdownMenu>
 
           <DisplayMenu />
+
+          {/* 尚未开始学习（没发过言、没写文书、没有环节点评）时，允许直接退出、不打分；一旦开始操作就隐藏 */}
+          {isStudent && onEndAnalysis && !hasStarted && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                interruptTts();
+                resetSession();
+                setTrainingStartTime(null);
+                router.push('/student/select');
+              }}
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+              title="还没开始学习，直接返回选案页，不生成分析、不保存记录"
+            >
+              <LogOut className="h-4 w-4" />
+              直接退出
+            </Button>
+          )}
 
           {/* 结束分析会中止本次训练，属于破坏性动作：保持可见但降为描边，点击先二次确认 */}
           {onEndAnalysis && (

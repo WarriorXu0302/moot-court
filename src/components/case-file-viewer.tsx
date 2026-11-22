@@ -38,6 +38,8 @@ interface CaseFileViewerProps {
   showHighlightFilter?: boolean;
   /** When provided, shows a "高亮" button in the selection toolbar for adding sentence highlights */
   onAddHighlight?: (sectionLabel: string, selectedText: string, role: string) => void;
+  /** 初始展开的条目，形如 `${分区下标}-${条目标题}`（如 "0-基本案情"）；默认全部收起 */
+  defaultOpenKey?: string | null;
 }
 
 const ANNOTATION_DEFAULT_COLOR = 'rgba(250, 204, 21, 0.2)';
@@ -54,8 +56,9 @@ export function CaseFileViewer({
   currentRole,
   showHighlightFilter = false,
   onAddHighlight,
+  defaultOpenKey = null,
 }: CaseFileViewerProps) {
-  const [openItemKey, setOpenItemKey] = useState<string | null>(null);
+  const [openItemKey, setOpenItemKey] = useState<string | null>(defaultOpenKey);
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set());
   const [allCollapsed, setAllCollapsed] = useState(false);
   const annotations = useAppStore((s) => s.caseAnnotations);

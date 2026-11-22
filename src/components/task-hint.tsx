@@ -109,10 +109,23 @@ export function TaskHint() {
     timerRef.current = setTimeout(() => setVisible(false), AUTO_CLOSE_MS);
   }, [clampPos]);
 
+  // 页面上有弹窗（Dialog / AlertDialog / Sheet）打开时，提示框自动收起、圆点降到弹窗遮罩之下，
+  // 不再盖住用户正在读的弹窗内容。Radix 弹窗挂在 body 下，带 role=dialog|alertdialog 与 data-state=open。
+  const [modalOpen, setModalOpen] = useState(false);
+  useEffect(() => {
+    const check = () => setModalOpen(!!document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]'));
+    check();
+    const mo = new MutationObserver(check);
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-state'] });
+    return () => mo.disconnect();
+  }, []);
+  useEffect(() => { if (modalOpen) setVisible(false); }, [modalOpen]);
+
   if (!hint) return null;
 
   // 收起态：右下角一个小按钮。原先关闭后提示就彻底消失、无法找回，用户只能离开页面再回来才能再看一次；
   // 同时这个按钮很小，不会像展开的卡片那样盖住卷宗等内容。
+
   if (!visible) {
     return (
       <button
@@ -120,7 +133,7 @@ export function TaskHint() {
         onClick={() => setVisible(true)}
         aria-label={`查看「${hint.title}」的任务提示`}
         title="本环节任务提示"
-        className="fixed bottom-[8.5rem] right-6 z-[60] flex h-9 w-9 items-center justify-center rounded-full border bg-card/95 text-muted-foreground shadow-md backdrop-blur transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="fixed bottom-[8.5rem] right-6 z-40 flex h-9 w-9 items-center justify-center rounded-full border bg-card/95 text-muted-foreground shadow-md backdrop-blur transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ListTodo className="h-4 w-4" />
       </button>
@@ -136,7 +149,7 @@ export function TaskHint() {
   return (
     <div
       ref={boxRef}
-      className="fixed z-[60] max-w-sm animate-in slide-in-from-bottom-5 duration-300"
+      className="fixed z-40 max-w-sm animate-in slide-in-from-bottom-5 duration-300"
       style={style}
     >
       <div

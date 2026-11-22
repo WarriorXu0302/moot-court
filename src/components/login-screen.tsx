@@ -30,6 +30,7 @@ export default function LoginScreen({ session }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('login');
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
   const [nickname, setNickname] = useState('');
   const [formError, setFormError] = useState('');
   const [formPending, setFormPending] = useState(false);
@@ -72,6 +73,11 @@ export default function LoginScreen({ session }: LoginScreenProps) {
     setFormError('');
     if (!studentId.trim() || !password) {
       setFormError('请输入学号和密码');
+      return;
+    }
+    // 注册时两次输入必须一致：密码框是掩码，输错一个字母就再也登录不上
+    if (mode === 'register' && password !== password2) {
+      setFormError('两次输入的密码不一致');
       return;
     }
     setFormPending(true);
@@ -276,8 +282,24 @@ export default function LoginScreen({ session }: LoginScreenProps) {
                       onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     />
                   </div>
+                  {mode === 'register' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="student-pwd2" className="text-sm text-muted-foreground">确认密码</Label>
+                      <Input
+                        id="student-pwd2"
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="请再次输入密码"
+                        value={password2}
+                        onChange={(e) => { setPassword2(e.target.value); setFormError(''); }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                        aria-invalid={!!password2 && password2 !== password}
+                      />
+                      {password2 && password2 !== password && <p className="text-xs text-destructive">两次输入的密码不一致</p>}
+                    </div>
+                  )}
                   {formError && <p className="text-xs text-destructive">{formError}</p>}
-                  <Button className="w-full" onClick={handleSubmit} disabled={anyPending || !studentId.trim() || !password}>
+                  <Button className="w-full" onClick={handleSubmit} disabled={anyPending || !studentId.trim() || !password || (mode === 'register' && password2 !== password)}>
                     {formPending ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{mode === 'login' ? '正在登录...' : '正在注册...'}</>
                     ) : (
@@ -287,7 +309,7 @@ export default function LoginScreen({ session }: LoginScreenProps) {
                   <div className="flex items-center justify-between text-sm">
                     <button
                       type="button"
-                      onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setFormError(''); }}
+                      onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setFormError(''); setPassword2(''); }}
                       className="text-primary underline-offset-4 hover:underline"
                     >
                       {mode === 'login' ? '没有账号？立即注册' : '已有账号？返回登录'}

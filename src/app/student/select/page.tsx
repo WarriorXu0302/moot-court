@@ -187,6 +187,7 @@ export default function SelectCasePage() {
                           <span className="line-clamp-2 text-sm font-medium leading-snug">{c.name}</span>
                           <span className={`mt-0.5 block text-xs ${active ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                             {CASE_TYPE_LABEL[normalizeCaseType(c.caseType)]}
+                            {c.meta?.keywords?.[1] ? ` · ${c.meta.keywords[1]}` : ''}
                             {done ? ` · 已训练 ${done.trainCount} 次` : ''}
                           </span>
                         </span>
@@ -262,6 +263,16 @@ export default function SelectCasePage() {
                   <h3 className="mb-1.5 text-sm font-semibold text-foreground">案件概要</h3>
                   <p className="whitespace-pre-wrap text-[0.95rem] leading-relaxed text-foreground/85">{selectedCase.profile}</p>
                 </div>
+                {(selectedCase.meta?.keywords?.length ?? 0) > 0 && (
+                  <div>
+                    <h3 className="mb-1.5 text-sm font-semibold text-foreground">涉及领域</h3>
+                    <ul className="flex flex-wrap gap-1.5" aria-label="涉及领域">
+                      {selectedCase.meta?.keywords?.map((k) => (
+                        <li key={k} className="rounded-sm border bg-card px-2 py-0.5 text-xs text-foreground/80">{k}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <div>
                   <h3 className="mb-1.5 text-sm font-semibold text-foreground">你会练到什么</h3>
                   <p className="whitespace-pre-wrap text-[0.95rem] leading-relaxed text-foreground/85">{selectedCase.teach}</p>
