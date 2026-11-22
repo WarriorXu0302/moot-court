@@ -174,7 +174,10 @@ export interface Annotation {
   itemKey: string;
   selectedText: string;
   note: string;
-  type: 'underline' | 'note';
+  /** mark = 「标记文字」黄色底色（案件基本资料），按出现次序定位，同一词多处出现时只标选中的那一处 */
+  type: 'underline' | 'note' | 'mark';
+  /** mark 专用：selectedText 在该条目中第几次出现（从 0 起） */
+  occurrence?: number;
   createdAt: number;
 }
 

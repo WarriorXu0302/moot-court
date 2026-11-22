@@ -48,6 +48,8 @@ interface AppState {
   lifecycle: CaseLifecycle | null;
   lifecycleLoading: boolean;
   lifecycleVisible: boolean;
+  /** 偏好：案情研读页答完一道思考题后是否自动切到下一题（默认否，需手动点「下一题」） */
+  questionAutoAdvance: boolean;
 
   // Case file annotations (persist across page navigation within session)
   caseAnnotations: Annotation[];
@@ -77,6 +79,7 @@ interface AppState {
   setLifecycle: (l: CaseLifecycle | null) => void;
   setLifecycleLoading: (v: boolean) => void;
   toggleLifecycleVisible: () => void;
+  setQuestionAutoAdvance: (v: boolean) => void;
   setLifecycleVisible: (v: boolean) => void;
   addCaseAnnotation: (a: Annotation) => void;
   removeCaseAnnotation: (id: string) => void;
@@ -107,6 +110,7 @@ export const useAppStore = create<AppState>()(
       lifecycle: null,
       lifecycleLoading: false,
       lifecycleVisible: true,
+      questionAutoAdvance: false,
       caseAnnotations: [],
       docProgress: {},
       trainingStartTime: null,
@@ -182,6 +186,7 @@ export const useAppStore = create<AppState>()(
       setLifecycle: (l) => set({ lifecycle: l }),
       setLifecycleLoading: (v) => set({ lifecycleLoading: v }),
       toggleLifecycleVisible: () => set((s) => ({ lifecycleVisible: !s.lifecycleVisible })),
+      setQuestionAutoAdvance: (v) => set({ questionAutoAdvance: v }),
       setLifecycleVisible: (v) => set({ lifecycleVisible: v }),
       addCaseAnnotation: (a) => set((s) => ({ caseAnnotations: [...s.caseAnnotations, a] })),
       removeCaseAnnotation: (id) => set((s) => ({ caseAnnotations: s.caseAnnotations.filter((a) => a.id !== id) })),
@@ -243,6 +248,7 @@ export const useAppStore = create<AppState>()(
         documents: state.documents,
         docProgress: state.docProgress,
         trainingStartTime: state.trainingStartTime,
+        questionAutoAdvance: state.questionAutoAdvance,
       }),
     }
   )

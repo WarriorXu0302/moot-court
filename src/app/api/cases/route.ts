@@ -484,7 +484,15 @@ function rowToCaseData(row: Record<string, unknown>, opts: { forStudent?: boolea
   const metaParsed = isAdversarial(caseType) ? parseArbitrationMeta(row.meta) : undefined;
   // 学生不得看到标准答案（裁判要旨 / 法理分析）。在服务端剪掉，而不是靠前端不渲染——
   // 前端不渲染仍然会让答案出现在网络响应里，F12 就能看到。
-  const meta = metaParsed && opts.forStudent ? { ...metaParsed, reference: undefined } : metaParsed;
+  // 案情大纲里的「裁判」小节（一审裁定、二审判决等）就是学生要在庭审中论证的结论，同样在服务端剪掉；
+  // 有大纲时，学生拿到的案件基本资料（case）也改为去掉裁判小节后的正文，AI 助教与庭审角色的上下文随之不含结论。
+  const studentOutline = metaParsed?.outline
+    ?.map((st) => ({ ...st, sections: st.sections.filter((sec) => sec.kind !== 'ruling') }))
+    .filter((st) => st.sections.length > 0);
+  const meta = metaParsed && opts.forStudent ? { ...metaParsed, reference: undefined, outline: studentOutline } : metaParsed;
+  const studentCaseText = opts.forStudent && studentOutline && studentOutline.length > 0
+    ? studentOutline.flatMap((st) => st.sections.map((sec) => sec.text)).join('\n')
+    : undefined;
   return {
     id: row.id as string,
     caseType,
@@ -492,7 +500,7 @@ function rowToCaseData(row: Record<string, unknown>, opts: { forStudent?: boolea
     name: (row.name as string) || '',
     profile: (row.profile as string) || '',
     teach: (row.teach as string) || '',
-    case: (row.case_info as string) || '',
+    case: studentCaseText ?? ((row.case_info as string) || ''),
     plead: (row.plead as string) || '',
     record: (row.record as string) || '',
     evidence: (row.evidence as string) || '',

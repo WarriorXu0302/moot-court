@@ -40,9 +40,20 @@ interface CaseFileViewerProps {
   onAddHighlight?: (sectionLabel: string, selectedText: string, role: string) => void;
   /** 初始展开的条目，形如 `${分区下标}-${条目标题}`（如 "0-基本案情"）；默认全部收起 */
   defaultOpenKey?: string | null;
+  /** 标题栏显示【标记文字】【取消标记】（类似法考答题界面）：选中文字后点击，黄色底色标出 */
+  markTools?: boolean;
+  /**
+   * 批注作用域：批注存在全局 store、按条目下标定位。页面上同时有多个查看器时（案件基本资料 + 卷宗），
+   * 必须给不同前缀，否则两边下标相同的条目会互相串批注。
+   */
+  annotationScope?: string;
 }
 
 const ANNOTATION_DEFAULT_COLOR = 'rgba(250, 204, 21, 0.2)';
+
+/** 只在事件处理里调用；放在组件外，避免 React 编译器把组件内的 Date.now / Math.random 判为渲染期副作用 */
+function nowMs(): number { return Date.now(); }
+function newAnnotationId(): string { return `ann-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
 
 export function CaseFileViewer({
   sections,
@@ -57,6 +68,8 @@ export function CaseFileViewer({
   showHighlightFilter = false,
   onAddHighlight,
   defaultOpenKey = null,
+  markTools = false,
+  annotationScope = '',
 }: CaseFileViewerProps) {
   const [openItemKey, setOpenItemKey] = useState<string | null>(defaultOpenKey);
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set());
@@ -70,6 +83,54 @@ export function CaseFileViewer({
   const [wrongModalOpen, setWrongModalOpen] = useState(false);
   const [wrongDraft, setWrongDraft] = useState(wrongContent || '');
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [markHint, setMarkHint] = useState<string | null>(null);
+  const flashHint = (t: string) => { setMarkHint(t); setTimeout(() => setMarkHint(null), 2500); };
+
+  /** 当前选区所在条目的内容容器 */
+  const selectionContext = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return null;
+    const anchor = sel.getRangeAt(0).startContainer;
+    const el = (anchor.nodeType === Node.ELEMENT_NODE ? (anchor as Element) : anchor.parentElement)?.closest<HTMLElement>('[data-item-key]');
+    if (!el || !containerRef.current?.contains(el)) return null;
+    return { sel, el, itemKey: el.dataset.itemKey ?? '' };
+  };
+
+  const markSelection = () => {
+    const ctx = selectionContext();
+    if (!ctx) { flashHint('请先在案件资料中选中要标记的文字'); return; }
+    const range = ctx.sel.getRangeAt(0);
+    const text = ctx.sel.toString().trim();
+    if (text.length < 1) return;
+    // 算出选中的是该词在本条目里的第几次出现，避免"盈发公司"出现多次时总是标到第一处
+    let occurrence = 0;
+    for (let n = 0; n < 500; n++) {
+      const r = findTextRange(ctx.el, text, { occurrence: n, includeMarked: true });
+      if (!r) break;
+      if (r.comparePoint(range.startContainer, range.startOffset) === 0) { occurrence = n; break; }
+    }
+    addCaseAnnotation({
+      id: newAnnotationId(),
+      itemKey: ctx.itemKey, selectedText: text, note: '', type: 'mark', occurrence, createdAt: nowMs(),
+    });
+    ctx.sel.removeAllRanges();
+    setFloatToolbar(null);
+  };
+
+  const unmarkSelection = () => {
+    const ctx = selectionContext();
+    if (!ctx) { flashHint('请先选中要取消标记的文字'); return; }
+    // 与选区有交集的黄色标记全部取消
+    const hit = new Set<string>();
+    ctx.el.querySelectorAll<HTMLElement>('[data-ann-id][data-manual-mark="mark"]').forEach((span) => {
+      if (ctx.sel.containsNode(span, true) && span.dataset.annId) hit.add(span.dataset.annId);
+    });
+    if (hit.size === 0) { flashHint('选中的文字里没有标记'); return; }
+    hit.forEach((id) => removeCaseAnnotationById(id));
+    ctx.sel.removeAllRanges();
+    setFloatToolbar(null);
+  };
 
   // Highlight role filter: which roles' highlights are visible
   // Default: if currentRole is set, only show that role; otherwise show all
@@ -177,12 +238,12 @@ export function CaseFileViewer({
   const doStrikethrough = () => {
     if (!floatToolbar) return;
     const newAnn: Annotation = {
-      id: `ann-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: newAnnotationId(),
       itemKey: floatToolbar.itemKey,
       selectedText: floatToolbar.text,
       note: '',
       type: 'underline',
-      createdAt: Date.now(),
+      createdAt: nowMs(),
     };
     // Commit to global store — persists across page navigation
     addCaseAnnotation(newAnn);
@@ -199,12 +260,12 @@ export function CaseFileViewer({
   const confirmAnnotate = () => {
     if (!floatToolbar) return;
     const newAnn: Annotation = {
-      id: `ann-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: newAnnotationId(),
       itemKey: floatToolbar.itemKey,
       selectedText: floatToolbar.text,
       note: noteInput.trim(),
       type: 'note',
-      createdAt: Date.now(),
+      createdAt: nowMs(),
     };
     // Commit to global store — persists across page navigation
     addCaseAnnotation(newAnn);
@@ -258,6 +319,17 @@ export function CaseFileViewer({
             {allCollapsed ? <ChevronsUpDown className="h-3 w-3" /> : <ChevronsDownUp className="h-3 w-3" />}
             <span className="ml-1 text-xs hidden lg:inline">{allCollapsed ? '展开' : '折叠'}</span>
           </Button>
+          {markTools && (
+            <>
+              {/* onMouseDown 阻止默认行为：否则按下按钮的瞬间选区就被清掉了 */}
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onMouseDown={(e) => e.preventDefault()} onClick={markSelection} title="选中文字后点击，用黄色标出">
+                <Highlighter className="h-3 w-3" />标记文字
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onMouseDown={(e) => e.preventDefault()} onClick={unmarkSelection} title="选中已标记的文字后点击，取消标记">
+                取消标记
+              </Button>
+            </>
+          )}
           {showWrongButton && (
             <button
               className="text-xs px-2 py-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
@@ -331,7 +403,7 @@ export function CaseFileViewer({
                       {section.items.map((item, iIdx) => {
                         const key = `${sIdx}-${item.title}`;
                         const isOpen = openItemKey === key;
-                        const itemKey = `${sIdx}-${iIdx}`;
+                        const itemKey = `${annotationScope}${sIdx}-${iIdx}`;
                         return (
                           <div key={iIdx}>
                             <button
@@ -350,6 +422,7 @@ export function CaseFileViewer({
                             {isOpen && (
                               <div
                                 className="ml-4 mt-1 mb-2 max-h-[50vh] overflow-y-auto scroll-thin rounded-sm border-l-2 border-primary/30 bg-card px-4 py-3 markdown-content docket-text"
+                                data-item-key={itemKey}
                                 onMouseUp={(e) => { e.stopPropagation(); handleMouseUp(itemKey, section.label); }}
                               >
                                 {renderContent(itemKey, item.book, section.label)}
@@ -437,6 +510,10 @@ export function CaseFileViewer({
           );
         })()}
       </div>
+
+      {markHint && (
+        <div role="status" className="absolute left-1/2 top-12 z-50 -translate-x-1/2 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow">{markHint}</div>
+      )}
 
       {/* Floating toolbar — appears at selection position */}
       {floatToolbar && (
@@ -569,12 +646,16 @@ export function CaseFileViewer({
  * Handles whitespace differences between selection.toString() and DOM text content
  * by normalizing all whitespace to single spaces in both the search text and the index.
  */
-function findTextRange(container: HTMLElement, rawSearchText: string): Range | null {
+function findTextRange(
+  container: HTMLElement,
+  rawSearchText: string,
+  opts: { occurrence?: number; includeMarked?: boolean } = {},
+): Range | null {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) => {
-      // Skip text nodes inside our manual mark spans
+      // Skip text nodes inside our manual mark spans（标记文字按出现次序定位，需要把已标记的文字也计入，否则次序会错位）
       const parent = node.parentElement;
-      if (parent && parent.dataset.manualMark) return NodeFilter.FILTER_REJECT;
+      if (!opts.includeMarked && parent && parent.dataset.manualMark) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   });
@@ -621,6 +702,10 @@ function findTextRange(container: HTMLElement, rawSearchText: string): Range | n
   }
 
   let matchIdx = fullText.indexOf(searchNormalized);
+  for (let n = 0; n < (opts.occurrence ?? 0) && matchIdx !== -1; n++) {
+    matchIdx = fullText.indexOf(searchNormalized, matchIdx + searchNormalized.length);
+  }
+  if (matchIdx === -1 && (opts.occurrence ?? 0) > 0) return null;
   let matchLen = searchNormalized.length;
   if (matchIdx === -1) {
     // Fallback: try matching with all whitespace stripped
@@ -735,11 +820,12 @@ function mapNormalizedToOriginal(original: string, normalized: string, normalize
 /**
  * Wrap a Range with a styled span. Uses surroundContents, with fallback for multi-element ranges.
  */
-function wrapRangeWithSpan(range: Range, styles: Partial<CSSStyleDeclaration>, markType: string, className?: string): void {
+function wrapRangeWithSpan(range: Range, styles: Partial<CSSStyleDeclaration>, markType: string, className?: string, annId?: string): void {
   const span = document.createElement('span');
   Object.assign(span.style, styles);
   if (className) span.className = className;
   span.dataset.manualMark = markType;
+  if (annId) span.dataset.annId = annId;
   try {
     range.surroundContents(span);
   } catch {
@@ -791,6 +877,11 @@ function AnnotationRenderer({
     // 3. Apply user annotations (underline + note)
     for (const ann of annotations) {
       if (!ann.selectedText) continue;
+      if (ann.type === 'mark') {
+        const markRange = findTextRange(container, ann.selectedText, { occurrence: ann.occurrence ?? 0, includeMarked: true });
+        if (markRange) wrapRangeWithSpan(markRange, { backgroundColor: 'rgba(250, 204, 21, 0.55)', borderRadius: '2px' }, 'mark', undefined, ann.id);
+        continue;
+      }
       const range = findTextRange(container, ann.selectedText);
       if (!range) continue;
 

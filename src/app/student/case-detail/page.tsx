@@ -14,6 +14,7 @@ import { parseLifecycleFromAIResponse, advanceLifecycleForPage, generateInitialL
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/lib/store';
 import { parseHighlights } from '@/lib/highlights';
@@ -68,7 +69,7 @@ export default function CaseDetailPage() {
   const router = useRouter();
   const { modal: endAnalysisModal, handleEndAnalysis } = useEndAnalysis({ currentPageName: '案例研习' });
 
-  const { selectedCase, addLearningRecord, user, hydrated, learningRecords, selectedRole, lifecycle, setLifecycle } = useAppStore();
+  const { selectedCase, addLearningRecord, user, hydrated, learningRecords, selectedRole, lifecycle, setLifecycle, questionAutoAdvance, setQuestionAutoAdvance } = useAppStore();
 
   const [caseData, setCaseData] = useState(selectedCase);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -201,9 +202,12 @@ export default function CaseDetailPage() {
 
   const lawList = parseStringArray(caseData?.law);
   const caseOutline = caseData?.meta?.outline;
+  // 没有大纲的案例（教师新建等）也走同一查看器：整段原文作为一个小节，保证都能「标记文字」
   const caseOutlineSections: CaseFileSection[] | null = caseOutline && caseOutline.length > 0
     ? caseOutline.map((st) => ({ label: st.stage, items: st.sections.map((sec) => ({ title: sec.title, book: sec.text })) }))
-    : null;
+    : caseData?.case
+      ? [{ label: '案情', items: [{ title: '基本案情', book: caseData.case }] }]
+      : null;
 
   const contextData = isArbitration
     ? buildArbitrationContext(caseData)
@@ -350,6 +354,18 @@ export default function CaseDetailPage() {
     setInput('');
   };
 
+  /** 选中 from 之后第一道未答的题；都答完则回到自由提问 */
+  const goToNextQuestion = (from: number, answers: Record<number, { answer: string; score: number }> = questionAnswers) => {
+    const total = questions.length;
+    let next = -1;
+    for (let k = 1; k <= total; k++) {
+      const j = (from + k) % total;
+      if (!answers[j]) { next = j; break; }
+    }
+    setSelectedQuestion(next >= 0 ? String(next) : '');
+    setInput('');
+  };
+
   const handleSendAnswer = () => {
     if (!selectedQuestion && !input.trim()) return;
     const userAnswer = input.trim();
@@ -364,14 +380,9 @@ export default function CaseDetailPage() {
       if (!isNaN(qIdx)) {
         const nextAnswers = { ...questionAnswers, [qIdx]: { answer: userAnswer, score: 0 } };
         setQuestionAnswers(nextAnswers);
-        // 自动选中下一道未答的题，省得学生再去找
-        const total = questions.length;
-        let next = -1;
-        for (let k = 1; k <= total; k++) {
-          const j = (qIdx + k) % total;
-          if (!nextAnswers[j]) { next = j; break; }
-        }
-        setSelectedQuestion(next >= 0 ? String(next) : '');
+        // 偏好「答完自动下一题」时才跳题；否则停在本题，可继续补充，点「下一题」再切换
+        // （原先固定自动跳题，学生以为还在补充上一题，实际已在答下一题）
+        if (questionAutoAdvance) goToNextQuestion(qIdx, nextAnswers);
         // 清单展开时会占掉对话区大半高度（1024 宽实测只剩 3 行），答过一题后收起，进度仍显示在清单标题上
         setQuestionsOpen(false);
       }
@@ -531,6 +542,8 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                 highlightConfig={highlightConfig}
                 currentRole={selectedRole || undefined}
                 defaultOpenKey={`0-${caseOutlineSections[0]?.items[0]?.title ?? ''}`}
+                markTools
+                annotationScope="basic:"
               />
             </div>
           ) : (
@@ -702,9 +715,30 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                     {Number(selectedQuestion) + 1}. {questions[Number(selectedQuestion)]}
                   </p>
                 )}
-                正在回答第 {Number(selectedQuestion) + 1} 题{questionAnswers[Number(selectedQuestion)] ? '（已答过，再发送会补充回答）' : ''}。
-                <button type="button" className="ml-1 underline hover:text-foreground" onClick={() => handleSelectQuestion('')}>改为自由提问</button>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span>
+                    正在回答第 {Number(selectedQuestion) + 1} 题{questionAnswers[Number(selectedQuestion)] ? '（已答过，再发送会补充回答）' : ''}。
+                    <button type="button" className="ml-1 underline hover:text-foreground" onClick={() => handleSelectQuestion('')}>改为自由提问</button>
+                  </span>
+                  {!questionAutoAdvance && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="ml-auto h-6 px-2 text-xs"
+                      onClick={() => goToNextQuestion(Number(selectedQuestion))}
+                      disabled={isStreaming || answeredCount >= questions.length}
+                    >
+                      下一题<ChevronRight className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
+            )}
+            {questions.length > 0 && (
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                <Switch checked={questionAutoAdvance} onCheckedChange={setQuestionAutoAdvance} className="scale-75" aria-label="答完一题自动切到下一题" />
+                答完一题自动切到下一题
+              </label>
             )}
 
             <div className="flex gap-2">
