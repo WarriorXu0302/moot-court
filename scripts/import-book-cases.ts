@@ -13,6 +13,7 @@
  *   （.doc 先用 macOS 自带 textutil 转 txt：textutil -convert txt -encoding UTF-8 书稿.doc -output 书稿.txt）
  *
  * 用法：pnpm exec tsx scripts/import-book-cases.ts <序号|all|列表 1,2,5> [--dry] [--book=路径] [--concurrency=4]
+ *       pnpm exec tsx scripts/import-book-cases.ts 44,45,48 --regen   按教材重新生成已入库案例（原地更新，保留 id 与状态）
  *   序号为解析结果的下标；幂等：同名案例已存在则跳过。
  */
 import fs from 'node:fs';
@@ -211,8 +212,59 @@ async function importOne(i: number, b: BookCase, dry: boolean, existing: Set<str
   return `${tag} 已入库 id=${data.id}${leakNote}`;
 }
 
+/**
+ * 按教材重新生成已入库案例的 AI 拟制部分，原地更新（保留 id、名称、发布状态）。
+ * 用于纠正类型错归：第一批手选的 6 个案例统一按仲裁生成，其中天卓、SPAR、BY.O 实为法院诉讼，
+ * 只改 case_type 的话角色设定（首席仲裁员…）、文书（仲裁申请书…）都对不上庭审流程，必须整套重生成。
+ */
+async function regenerateExisting(i: number, b: BookCase, dry: boolean): Promise<string> {
+  const type = decideType(b);
+  const db = getSupabaseClient();
+  const { data: rows, error } = await db.from('cases').select('id,name,status,case_type');
+  if (error) throw error;
+  const key = (b.caseName || caseTitle(b)).slice(0, 12);
+  const hit = (rows ?? []).filter((r) => String(r.name).includes(key) || key.includes(String(r.name).slice(0, 12)));
+  if (hit.length !== 1) throw new Error(`按名称「${key}」匹配到 ${hit.length} 个案例，需唯一`);
+  const cur = hit[0];
+  const ai = await fill(b, type);
+  const leaks = leakCheck(ai, b);
+  const issues = splitIssues(b.issues);
+  const meta: ArbitrationMeta = {
+    rules: 'UNCITRAL', seat: type === 'arbitration' ? '见案情' : '', governingLaw: '见案情（本案争点之一）', language: 'zh', claimAmount: '见案情',
+    court: type === 'civil' ? (ai.court && ai.court !== '见案情' ? ai.court : '见案情') : undefined,
+    issues: issues.map((t, k) => ({ id: `issue-${k + 1}`, title: t, type: /管辖|仲裁协议|承认|执行|送达/.test(t) ? 'jurisdiction' : 'merits' })),
+    reference: {
+      source: `《中国国际私法经典案例评析》${b.chapter}·${b.title}`,
+      caseNo: b.caseNo, holding: clean(b.holding), analysis: clean(b.analysis), issues: clean(b.issues), extended: splitExt(b.ext),
+      aiDrafted: [...NEED],
+    },
+  };
+  // 评分标准按旧类型生成的环节 key（arb-*）对不上新类型，一并清空，由教师端重新生成
+  const patch = {
+    profile: ai.profile, teach: ai.teach, case_info: clean(b.facts),
+    plead: ai.plead, record: ai.record, evidence: ai.evidence, law: ai.law, wrong: ai.wrong, person: ai.person,
+    case_type: type, meta, judge: null, updated_at: new Date().toISOString(),
+  };
+  fs.mkdirSync(OUT_DIR, { recursive: true });
+  fs.writeFileSync(`${OUT_DIR}/regen-${i}.json`, JSON.stringify({ id: cur.id, ...patch }, null, 1));
+  const tag = `[${i}] ${String(cur.name).slice(0, 30)}：${cur.case_type} → ${type}（状态 ${cur.status} 不变）`;
+  const leakNote = leaks.length ? `；⚠ 疑似答案重合 ${leaks.length} 处` : '';
+  if (dry) return `${tag} [dry]${leakNote}`;
+  const { error: upErr } = await db.from('cases').update(patch).eq('id', cur.id);
+  if (upErr) throw upErr;
+  return `${tag} 已更新 id=${cur.id}${leakNote}`;
+}
+
 async function main() {
   const arg = argv.find((a) => !a.startsWith('--')); const dry = argv.includes('--dry');
+  if (argv.includes('--regen') && arg) {
+    const book = loadBook();
+    for (const i of arg.split(',').map(Number)) {
+      try { console.log(await regenerateExisting(i, book[i], dry)); }
+      catch (e) { console.log(`[${i}] 失败：${e instanceof Error ? e.message : JSON.stringify(e)}`); }
+    }
+    return;
+  }
   if (!arg) { console.log('用法: import-book-cases.ts <序号|all|1,2,5> [--dry] [--book=路径] [--concurrency=4]'); process.exit(1); }
   const book = loadBook();
   const idxs = arg === 'all' ? book.map((_, i) => i) : arg.split(',').map(Number);
