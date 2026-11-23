@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { TitleBar } from '@/components/title-bar';
 import { ContinueModal } from '@/components/continue-modal';
@@ -15,6 +15,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { CopyButton } from '@/components/copy-button';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/lib/store';
 import { parseHighlights } from '@/lib/highlights';
@@ -31,7 +32,7 @@ import { useStageDialogueLogger } from '@/hooks/use-stage-logger';
 import { getArbitrationNextRoute } from '@/lib/arbitration-route';
 import { isAdversarial } from '@/lib/case-type';
 import { generateArbitrationQuestions, setArbitrationInitialLifecycle, getArbitrationFallbackQuestions, advanceArbitrationLifecycle } from '@/lib/arbitration-study';
-import { buildArbitrationFileSections, buildArbitrationContext } from '@/lib/arbitration-case-utils';
+import { buildArbitrationFileSections, buildArbitrationContext, buildCaseOutlineSections } from '@/lib/arbitration-case-utils';
 
 const FALLBACK_QUESTIONS = [
   '1. 本案的犯罪行为人是谁？',
@@ -158,6 +159,11 @@ export default function CaseDetailPage() {
   }, [selectedCase, user, hydrated, router]);
 
   const answeredCount = Object.keys(questionAnswers).length;
+  // 点「继续」前提醒还没回答的思考题（列出题号，最多显示 6 个）
+  const unansweredNos = questions.map((_, i) => i).filter((i) => !questionAnswers[i]).map((i) => i + 1);
+  const unansweredConfirm = unansweredNos.length > 0
+    ? `思考题第 ${unansweredNos.slice(0, 6).join('、')}${unansweredNos.length > 6 ? ' 等' : ''} 题（共 ${unansweredNos.length} 道）还没有回答。这些题对应本案的核心争点，确认直接进入下一环节吗？`
+    : null;
   const allQuestionsAnswered = answeredCount === questions.length;
 
   // Build case file sections for the viewer
@@ -200,14 +206,9 @@ export default function CaseDetailPage() {
         ...(scoringSection ? [scoringSection] : []),
       ];
 
-  const lawList = parseStringArray(caseData?.law);
-  const caseOutline = caseData?.meta?.outline;
+  const lawList = useMemo(() => parseStringArray(caseData?.law), [caseData?.law]);
   // 没有大纲的案例（教师新建等）也走同一查看器：整段原文作为一个小节，保证都能「标记文字」
-  const caseOutlineSections: CaseFileSection[] | null = caseOutline && caseOutline.length > 0
-    ? caseOutline.map((st) => ({ label: st.stage, items: st.sections.map((sec) => ({ title: sec.title, book: sec.text })) }))
-    : caseData?.case
-      ? [{ label: '案情', items: [{ title: '基本案情', book: caseData.case }] }]
-      : null;
+  const caseOutlineSections: CaseFileSection[] | null = buildCaseOutlineSections(caseData);
 
   const contextData = isArbitration
     ? buildArbitrationContext(caseData)
@@ -517,6 +518,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
         onContinue={handleContinue}
         canContinue={true}
         continueTooltip=""
+        continueConfirm={unansweredConfirm}
         onEndAnalysis={handleEndAnalysis}
         showHome
         onHome={() => router.push('/')}
@@ -544,6 +546,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                 defaultOpenKey={`0-${caseOutlineSections[0]?.items[0]?.title ?? ''}`}
                 markTools
                 annotationScope="basic:"
+                lawItems={lawList}
               />
             </div>
           ) : (
@@ -631,6 +634,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                   <div className="markdown-content">
                     <ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkFriendly]}>{msg.content}</ReactMarkdown>
                   </div>
+                  {msg.role !== 'user' && <div className="-mb-1 mt-1 flex"><CopyButton text={msg.content} className="-ml-1.5" /></div>}
                 </div>
               </div>
             ))}

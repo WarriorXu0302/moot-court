@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Loader2, BookOpen, Landmark, FileSearch, AlertCircle, RefreshCw } from 'lucide-react';
-import { useLawSearch, LawResultColumns, LawDetailView, QUICK_KEYWORDS } from '@/components/law-search';
+import { useLawSearch, LawResultColumns, LawDetailView, QUICK_KEYWORDS, NO_RESULT_TEXT } from '@/components/law-search';
 
 // useSearchParams() 需在静态预渲染时由 Suspense 边界包裹，否则生产构建报
 // missing-suspense-with-csr-bailout
@@ -104,6 +104,18 @@ function LawSearchPageInner() {
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
             <AlertCircle className="h-8 w-8 text-destructive/70" />
             <p className="text-sm font-medium">{errorText || '检索失败'}</p>
+            {errorText === NO_RESULT_TEXT && (
+              <div className="max-w-md space-y-2 text-xs leading-relaxed text-muted-foreground">
+                <p>
+                  本检索库目前以刑事法律为主，<strong className="font-medium text-foreground">《涉外民事关系法律适用法》、民事诉讼法涉外编、仲裁法等国际私法法规暂未收录</strong>，
+                  所以这类关键词检索不到。可以先到官方数据库查原文：
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <a className="rounded-sm border bg-card px-2.5 py-1 text-foreground hover:bg-accent" href="https://flk.npc.gov.cn/" target="_blank" rel="noopener noreferrer">国家法律法规数据库 ↗</a>
+                  <a className="rounded-sm border bg-card px-2.5 py-1 text-foreground hover:bg-accent" href="https://www.court.gov.cn/" target="_blank" rel="noopener noreferrer">最高人民法院网站 ↗</a>
+                </div>
+              </div>
+            )}
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSearch}>
               <RefreshCw className="h-3.5 w-3.5" />
               重试

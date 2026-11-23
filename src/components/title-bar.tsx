@@ -51,6 +51,10 @@ interface TitleBarProps {
   onContinue?: () => void;
   canContinue?: boolean;
   continueTooltip?: string;
+  /** 点「继续」前需要确认的提示（如"第 3、5 题还没回答"）；为空则直接继续 */
+  continueConfirm?: string | null;
+  /** 点「跳过」时的确认说明；默认通用说明。传 false 关闭确认 */
+  skipConfirm?: string | false;
   onEndAnalysis?: () => void;
   pageName: string;
   showHome?: boolean;
@@ -64,6 +68,8 @@ export function TitleBar({
   onContinue,
   canContinue = false,
   continueTooltip = '',
+  continueConfirm = null,
+  skipConfirm,
   onEndAnalysis,
   pageName,
   showHome = false,
@@ -83,6 +89,8 @@ export function TitleBar({
   const [showDocs, setShowDocs] = useState(false);
   const [showWarning, setShowWarning] = useState<string | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  // 跳过 / 继续的二次确认：误点跳过会丢掉本环节点评，带着没答的思考题继续会漏掉核心内容
+  const [pendingConfirm, setPendingConfirm] = useState<null | 'skip' | 'continue'>(null);
 
   // 学习记录展示 = 已完成环节点评 + 各环节实时对话（同环节取对话更完整者）
   const mergedRecords = useMemo(
@@ -94,12 +102,23 @@ export function TitleBar({
   const caseType = normalizeCaseType(selectedCase?.caseType);
   const roleLabel = selectedRole ? getRoleLabel(caseType, selectedRole) : '未选择';
 
+  const doSkip = () => { interruptTts(); appendBehavior(`跳过「${pageName}」环节`); onSkip?.(); };
+  const handleSkip = () => {
+    if (skipConfirm === false) { doSkip(); return; }
+    setPendingConfirm('skip');
+  };
+
   const handleContinue = () => {
     if (!canContinue) {
       setShowWarning(continueTooltip || '当前条件未满足，无法继续');
       setTimeout(() => setShowWarning(null), 3000);
       return;
     }
+    if (continueConfirm) { setPendingConfirm('continue'); return; }
+    doContinue();
+  };
+
+  const doContinue = () => {
     // 行为轨迹：完成当前环节并生成AI点评
     appendBehavior(`完成「${pageName}」环节（生成AI点评）`);
     // Gracefully stop any ongoing TTS — the stage is over
@@ -142,7 +161,7 @@ export function TitleBar({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { interruptTts(); appendBehavior(`跳过「${pageName}」环节`); onSkip(); }}
+              onClick={handleSkip}
               className="shrink-0 text-muted-foreground hover:text-foreground"
             >
               <span className="hidden xl:inline">跳过本环节</span>
@@ -270,6 +289,33 @@ export function TitleBar({
           </div>
         )}
       </div>
+
+      {/* 跳过 / 继续 二次确认 */}
+      <AlertDialog open={pendingConfirm !== null} onOpenChange={(o) => { if (!o) setPendingConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{pendingConfirm === 'skip' ? `确认跳过「${pageName}」？` : '确认继续？'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingConfirm === 'skip'
+                ? (skipConfirm || '跳过后本环节不生成点评、不计入得分，直接进入下一步。之后可以点标题栏的「上一步」回来补做。')
+                : continueConfirm}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{pendingConfirm === 'skip' ? '留在本环节' : '回去作答'}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const which = pendingConfirm;
+                setPendingConfirm(null);
+                if (which === 'skip') doSkip();
+                else if (which === 'continue') doContinue();
+              }}
+            >
+              {pendingConfirm === 'skip' ? '确认跳过' : '仍然继续'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* 结束分析二次确认：防止误触中止训练 */}
       <AlertDialog open={confirmEnd} onOpenChange={setConfirmEnd}>

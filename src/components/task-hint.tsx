@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { getTaskHint } from '@/lib/task-hints';
 import { useAppStore } from '@/lib/store';
+import { useDraggableFab } from '@/hooks/use-draggable-fab';
 import { X, CheckSquare, GripVertical, ListTodo } from 'lucide-react';
 
 const AUTO_CLOSE_MS = 20000;
@@ -16,9 +17,10 @@ interface DragState {
 export function TaskHint() {
   const pathname = usePathname();
   const caseType = useAppStore((st) => st.selectedCase?.caseType);
+  // 收起态圆点可拖动，位置记在本地
+  const dot = useDraggableFab<HTMLButtonElement>('task-hint');
   const hint = getTaskHint(pathname, caseType);
   const [visible, setVisible] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevHintTitleRef = useRef<string | null>(null);
 
   // ---- Draggable position (persisted per session) ----
@@ -41,17 +43,38 @@ export function TaskHint() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  useEffect(() => {
-    if (visible && !dragRef.current.dragging) {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        setVisible(false);
-      }, AUTO_CLOSE_MS);
+  // 收起后在圆点旁提示"在这里重新打开"，前 3 次收起都提示（之后用户已知道位置）
+  const [reopenTip, setReopenTip] = useState(false);
+  const closeToDot = useCallback(() => {
+    setVisible(false);
+    let n = 0;
+    try { n = Number(localStorage.getItem('task-hint-reopen-tips') || '0'); } catch { /* ignore */ }
+    if (n < 3) {
+      setReopenTip(true);
+      try { localStorage.setItem('task-hint-reopen-tips', String(n + 1)); } catch { /* ignore */ }
+      setTimeout(() => setReopenTip(false), 6000);
     }
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
+  }, []);
+
+  // 自动收起倒计时：每秒更新显示的秒数（原先文案写死"20 秒"，数字不动）；
+  // 鼠标停在卡片上或正在拖动时暂停，读完再走
+  const [secondsLeft, setSecondsLeft] = useState(AUTO_CLOSE_MS / 1000);
+  const hoverRef = useRef(false);
+  useEffect(() => {
+    if (!visible) return;
+    setSecondsLeft(AUTO_CLOSE_MS / 1000);
+    const id = setInterval(() => {
+      if (dragRef.current.dragging || hoverRef.current) return;
+      setSecondsLeft((n) => n - 1);
+    }, 1000);
+    return () => clearInterval(id);
   }, [visible]);
+  useEffect(() => {
+    // 收起时把倒计时复位：否则下次点圆点重新打开的同一轮渲染里读到的还是 0，卡片会立刻又被收起
+    if (visible && secondsLeft <= 0) { setSecondsLeft(AUTO_CLOSE_MS / 1000); closeToDot(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft, visible]);
+
 
   // ---- Drag handlers (pointer events; direct DOM writes during drag, commit once on release) ----
   const clampPos = useCallback((x: number, y: number): { x: number; y: number } => {
@@ -80,7 +103,6 @@ export function TaskHint() {
     box.style.top = `${rect.top}px`;
     box.style.willChange = 'left, top';
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    if (timerRef.current) clearTimeout(timerRef.current); // pause auto-close while dragging
   }, []);
 
   const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -104,9 +126,6 @@ export function TaskHint() {
       // 松手时一次性提交最终位置到 React（整个拖拽过程仅此一次重渲染）
       setPos(clampPos(parseFloat(box.style.left), parseFloat(box.style.top)));
     }
-    // restart auto-close countdown after drag
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setVisible(false), AUTO_CLOSE_MS);
   }, [clampPos]);
 
   // 页面上有弹窗（Dialog / AlertDialog / Sheet）打开时，提示框自动收起、圆点降到弹窗遮罩之下，
@@ -130,12 +149,23 @@ export function TaskHint() {
     return (
       <button
         type="button"
-        onClick={() => setVisible(true)}
-        aria-label={`查看「${hint.title}」的任务提示`}
-        title="本环节任务提示"
-        className="fixed bottom-[8.5rem] right-6 z-40 flex h-9 w-9 items-center justify-center rounded-full border bg-card/95 text-muted-foreground shadow-md backdrop-blur transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        ref={dot.ref}
+        {...dot.handlers}
+        style={dot.style}
+        onClick={dot.guardClick(() => { setReopenTip(false); setVisible(true); })}
+        aria-label={`查看「${hint.title}」的任务提示（可拖动）`}
+        title="本环节任务提示；按住可拖到别处"
+        className="fixed bottom-[8.5rem] right-6 z-40 flex h-9 w-9 touch-none select-none cursor-grab active:cursor-grabbing items-center justify-center rounded-full border bg-card/95 text-muted-foreground shadow-md backdrop-blur transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ListTodo className="h-4 w-4" />
+        {reopenTip && (
+          <>
+            <span className="pointer-events-none absolute inset-0 animate-ping rounded-full bg-primary/30" aria-hidden />
+            <span role="status" className="pointer-events-none absolute right-full top-1/2 mr-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs text-background shadow-lg">
+              任务提示收到这里了，点这个圆点可重新打开 →
+            </span>
+          </>
+        )}
       </button>
     );
   }
@@ -153,7 +183,10 @@ export function TaskHint() {
       style={style}
     >
       <div
-        className="rounded-lg border bg-card/95 backdrop-blur-md shadow-lg p-4 space-y-2.5 cursor-grab active:cursor-grabbing touch-none"
+        // select-none：拖动时不再选中卡片里的文字（原先一拖就蓝色高亮并弹出浏览器划词工具栏）
+        className="rounded-lg border bg-card/95 backdrop-blur-md shadow-lg p-4 space-y-2.5 cursor-grab active:cursor-grabbing touch-none select-none"
+        onPointerEnter={() => { hoverRef.current = true; }}
+        onPointerLeave={() => { hoverRef.current = false; }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -164,7 +197,7 @@ export function TaskHint() {
           <CheckSquare className="h-4 w-4 text-primary shrink-0" />
           <span className="text-sm font-bold text-foreground">{hint.title}</span>
           <button
-            onClick={() => setVisible(false)}
+            onClick={closeToDot}
             className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
             aria-label="关闭提示"
           >
@@ -181,7 +214,7 @@ export function TaskHint() {
         </div>
         <div className="pt-1.5 border-t">
           <span className="text-[11px] text-muted-foreground/70">
-            20 秒后收起，可随时从右下角圆点重新打开；标题处可拖动
+            {secondsLeft} 秒后收起到右下角圆点（鼠标停在这里会暂停），点圆点可重新打开；按住卡片可拖动
           </span>
         </div>
       </div>

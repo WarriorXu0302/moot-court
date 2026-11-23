@@ -10,7 +10,7 @@
  * 评价提示词注入本环节评分标准（stageStandardsToPrompt）；评价计数用 recordEvalProgress 持久化。
  */
 
-import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react';
+import React, { Suspense, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Send, FileCheck, Save, Check, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -19,6 +19,7 @@ import remarkCjkFriendly from 'remark-cjk-friendly';
 import { TitleBar } from '@/components/title-bar';
 import { ContinueModal } from '@/components/continue-modal';
 import { CaseFileViewer } from '@/components/case-file-viewer';
+import { CopyButton } from '@/components/copy-button';
 import { LifecycleBar } from '@/components/lifecycle-bar';
 import { SampleViewerDialog } from '@/components/sample-viewer-dialog';
 import { StageStandardsViewer } from '@/components/stage-standards-viewer';
@@ -30,7 +31,8 @@ import { useEndAnalysis } from '@/hooks/use-end-analysis';
 import { useStageDialogueLogger } from '@/hooks/use-stage-logger';
 import { useAppStore } from '@/lib/store';
 import { getRoleLabel } from '@/lib/case-type';
-import { buildArbitrationContext, buildArbitrationFileSections, parseCaseItems } from '@/lib/arbitration-case-utils';
+import { buildArbitrationContext, buildArbitrationFileSections, buildCaseOutlineSections, parseCaseItems } from '@/lib/arbitration-case-utils';
+import { buildDocTemplate, isOnlyTemplate } from '@/lib/doc-templates';
 import { getArbitrationNextRoute, type ArbitrationDoc } from '@/lib/arbitration-route';
 import { getForumProfile, adversarialType } from '@/lib/forum-profile';
 import {
@@ -71,7 +73,7 @@ function ArbitrationWritingInner() {
   const [streamingText, setStreamingText] = useState('');
   const [editorContent, setEditorContent] = useState('');
   const [evaluation, setEvaluation] = useState('');
-  const [sideTab, setSideTab] = useState<'guide' | 'eval' | 'file'>('guide');
+  const [sideTab, setSideTab] = useState<'guide' | 'eval' | 'case' | 'file'>('guide');
   const [evaluating, setEvaluating] = useState(false);
   // 最近一次「请 AI 评价」针对的正文与得分：环节总结若是同一份正文就沿用这个分，避免两次独立打分得出两个分数（实测 40 vs 56）
   const lastEvalRef = useRef<{ text: string; score: number | undefined } | null>(null);
@@ -98,14 +100,29 @@ function ArbitrationWritingInner() {
   // 离开页面自动保存文书；载入已保存内容
   const editorRef = useRef(editorContent);
   editorRef.current = editorContent;
-  useEffect(() => () => { if (editorRef.current.trim()) setDocument(doc, editorRef.current); }, [doc, setDocument]);
-  useEffect(() => { const s = documents[doc]; if (s) setEditorContent(s); }, [documents, doc]);
+  // 文书模板：固定组成部分预先列成小标题、当事人名称从卷宗带出，学生按标题填写
+  const template = useMemo(() => buildDocTemplate(caseType, doc, selectedCase), [caseType, doc, selectedCase]);
+  const templateRef = useRef(template);
+  templateRef.current = template;
+  /** 写了实质内容（不是空白、也不只是模板原样） */
+  const hasContent = editorContent.trim().length > 0 && !isOnlyTemplate(editorContent, template);
+  useEffect(() => () => {
+    const t = editorRef.current;
+    if (t.trim() && !isOnlyTemplate(t, templateRef.current)) setDocument(doc, t);
+  }, [doc, setDocument]);
+  useEffect(() => {
+    const s = documents[doc];
+    if (s) setEditorContent(s);
+    else setEditorContent((cur) => (cur.trim() ? cur : templateRef.current));
+  }, [documents, doc]);
   useEffect(() => { setEvalProgress(getEvalProgressMap(selectedCase?.id, user?.id)[doc]); }, [selectedCase?.id, user?.id, doc]);
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, streamingText]);
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const contextData = buildArbitrationContext(selectedCase, documents);
   const caseFileSections = buildArbitrationFileSections(selectedCase);
+  const caseOutlineSections = buildCaseOutlineSections(selectedCase);
+  const lawItems = useMemo(() => parseCaseItems(selectedCase?.law).map((i) => (i.book ? `${i.title}：${i.book}` : i.title)), [selectedCase?.law]);
 
   // AI 样例：从案例文书卷中按关键词找（裁决书样例无预置，则无）
   const sampleText = parseCaseItems(selectedCase?.plead).find((i) => i.title.includes(cfg.sampleKeyword))?.book ?? '';
@@ -184,7 +201,7 @@ ${cfg.knowledge}`;
   };
 
   const handleEvaluate = async () => {
-    if (!editorContent.trim()) return;
+    if (!hasContent) return;
     setEvaluating(true);
     setEvaluation('');
     setSideTab('eval');
@@ -282,7 +299,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
         pageName={pageName}
         onSkip={goNext}
         onContinue={handleContinue}
-        canContinue={editorContent.trim().length > 0}
+        canContinue={hasContent}
         continueTooltip={`请先撰写${cfg.title}`}
         onEndAnalysis={handleEndAnalysis}
         showHome
@@ -303,7 +320,12 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                   建议结构：{cfg.structure}
                 </p>
                 <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:inline">{editorContent.replace(/\s/g, '').length} 字</span>
-                <Button variant="ghost" size="sm" className="h-8" onClick={handleSaveDoc} disabled={!editorContent.trim()}>
+                {!editorContent.trim() && (
+                  <Button variant="ghost" size="sm" className="h-8" onClick={() => setEditorContent(template)} title="把文书的固定组成部分作为小标题插入">
+                    插入模板
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" className="h-8" onClick={handleSaveDoc} disabled={!hasContent}>
                   {saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}{saved ? '已保存' : '保存'}
                 </Button>
                 {sampleText && (
@@ -311,7 +333,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                     <Sparkles className="h-3.5 w-3.5" />AI 样例
                   </Button>
                 )}
-                <Button size="sm" className="h-8" onClick={handleEvaluate} disabled={evaluating || !editorContent.trim()}>
+                <Button size="sm" className="h-8" onClick={handleEvaluate} disabled={evaluating || !hasContent}>
                   {evaluating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileCheck className="h-3.5 w-3.5" />}请 AI 评价
                 </Button>
               </div>
@@ -333,7 +355,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
           <ResizablePanel defaultSize={38} minSize={24}>
             <div className="flex h-full flex-col overflow-hidden bg-card">
               <div role="tablist" aria-label="辅助面板" className="flex shrink-0 border-b px-2">
-                {([['guide', '写作指导'], ['eval', '评价'], ['file', '卷宗']] as const).map(([key, label]) => (
+                {([['guide', '写作指导'], ['eval', '评价'], ['case', '基本案情'], ['file', '卷宗']] as const).map(([key, label]) => (
                   <button
                     key={key}
                     type="button"
@@ -351,7 +373,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
 
               {sideTab === 'guide' && (
                 <div className="flex min-h-0 flex-1 flex-col">
-                  <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 scroll-thin">
+                  <div ref={scrollRef} className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden p-4 scroll-thin">
                     {messages.length === 0 && !isStreaming && (
                       <div className="py-6 text-sm text-muted-foreground">
                         <p className="mb-2 text-foreground">可以这样问：</p>
@@ -366,15 +388,16 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                     )}
                     {messages.map((msg) => (
                       <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[90%] rounded-md px-3 py-2 text-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                          {msg.speaker && <div className="mb-1 font-semibold">{msg.speaker}</div>}
+                        <div className={`min-w-0 max-w-[90%] rounded-md px-3 py-2 text-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                          <div className={`mb-1 text-xs font-semibold ${msg.role === 'user' ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>{msg.role === 'user' ? `我（${roleLabel}）` : msg.speaker || 'AI 指导'}</div>
                           <div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkFriendly]}>{msg.content}</ReactMarkdown></div>
+                          {msg.role !== 'user' && <div className="-mb-1 mt-1 flex"><CopyButton text={msg.content} className="-ml-1.5" /></div>}
                         </div>
                       </div>
                     ))}
                     {isStreaming && (
                       <div className="flex justify-start">
-                        <div className="max-w-[90%] rounded-md bg-muted px-3 py-2">
+                        <div className="min-w-0 max-w-[90%] rounded-md bg-muted px-3 py-2">
                           {streamingText ? (
                             <div className="markdown-content text-sm"><ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkFriendly]}>{stripLifecycleForStreaming(streamingText)}</ReactMarkdown><span className="typewriter-cursor" /></div>
                           ) : (
@@ -400,7 +423,10 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                     {evaluating && !evaluation ? (
                       <div className="flex flex-col items-center justify-center gap-3 py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="text-sm text-muted-foreground">正在按评分标准评价…</p></div>
                     ) : evaluation ? (
-                      <div className="markdown-content text-sm"><ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkFriendly]}>{evaluation}</ReactMarkdown></div>
+                      <>
+                        <div className="markdown-content text-sm"><ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkFriendly]}>{evaluation}</ReactMarkdown></div>
+                        {!evaluating && <div className="mt-2 flex"><CopyButton text={evaluation} className="-ml-1.5" /></div>}
+                      </>
                     ) : (
                       <div className="py-10 text-center text-sm text-muted-foreground">
                         <FileCheck className="mx-auto mb-2 h-7 w-7 opacity-40" />
@@ -408,6 +434,15 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* 基本案情：写文书时随时对照整体案情（只看卷宗太零散），与案情研读页同一大纲 */}
+              {sideTab === 'case' && (
+                <div className="flex min-h-0 flex-1 flex-col">
+                  {caseOutlineSections
+                    ? <CaseFileViewer sections={caseOutlineSections} title="基本案情" defaultOpenKey={`0-${caseOutlineSections[0]?.items[0]?.title ?? ''}`} markTools annotationScope="basic:" lawItems={lawItems} />
+                    : <p className="p-4 text-sm text-muted-foreground">暂无案件基本资料</p>}
                 </div>
               )}
 

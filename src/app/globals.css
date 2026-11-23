@@ -335,7 +335,11 @@
 .markdown-content code { background: var(--muted); padding: 0.1em 0.3em; border-radius: 4px; font-size: 0.9em; }
 .markdown-content pre { background: var(--muted); padding: 0.6em 0.8em; border-radius: 6px; overflow-x: auto; margin: 0.5em 0; }
 .markdown-content pre code { background: none; padding: 0; }
-.markdown-content table { border-collapse: collapse; margin: 0.6em 0; font-size: 0.9em; width: 100%; }
+/* AI 回复里的长句、长链接、表格不能撑宽父容器：原先写作指导里一张表把聊天列撑出可视区，
+   AI 回复右半截被裁、右对齐的学生消息被挤到看不见的地方（2026-11 学生反馈视频） */
+.markdown-content { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.markdown-content table { border-collapse: collapse; margin: 0.6em 0; font-size: 0.9em; width: 100%; display: block; max-width: 100%; overflow-x: auto; }
+.markdown-content pre { white-space: pre-wrap; }
 .markdown-content th, .markdown-content td { border: 1px solid var(--border); padding: 0.3em 0.6em; text-align: left; }
 .markdown-content th { background: var(--muted); font-weight: 600; }
 

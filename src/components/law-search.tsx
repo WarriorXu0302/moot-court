@@ -16,6 +16,9 @@ import {
   type ExplainItem, type LegalBlock,
 } from '@/lib/law-format';
 
+/** 无结果提示。检索工作流（Coze）的法条库目前以刑事法为主，国际私法、涉外民事诉讼与仲裁法尚未收录（2026-11 实测：
+ * 「涉外民事关系法律适用法」「最密切联系」均无结果，「故意杀人」能检出刑法第 232 条），页面据此给出官方数据库入口。 */
+export const NO_RESULT_TEXT = '未检索到相关法条与解释';
 const WORKFLOW_ID = '7674184725792489498';
 
 export const QUICK_KEYWORDS = ['正当防卫', '故意伤害罪', '盗窃罪', '绑架罪', '诈骗罪'];
@@ -98,7 +101,7 @@ export function useLawSearch() {
           const law = asStringArray(data?.law);
           const explain = asExplainArray(data?.explain);
           if (law.length === 0 && explain.length === 0) {
-            setStatus('error'); setErrorText('未检索到相关法条与解释，请换个关键词试试');
+            setStatus('error'); setErrorText(NO_RESULT_TEXT);
           } else {
             setResult({ law, explain }); setStatus('done');
           }

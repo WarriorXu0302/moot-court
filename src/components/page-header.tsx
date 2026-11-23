@@ -51,7 +51,15 @@ export function DisplayMenu() {
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">配色</DropdownMenuLabel>
         {THEMES.map((t) => (
           <DropdownMenuItem key={t.value} onClick={() => setTheme(t.value)}>
-            <span className="mr-2 h-3 w-3 rounded-full border border-black/10" style={{ background: t.swatch }} aria-hidden />
+            {/* 缩略预览：在小方块上套该主题的 data-theme，直接取它真实的底色、卡片色和主色，
+                与选中后整页效果一致（原先只有一个主色圆点，五种都是深色点，难以区分） */}
+            <span data-theme={t.value} className="mr-2.5 flex h-7 w-11 shrink-0 flex-col gap-0.5 overflow-hidden rounded-[3px] border border-border bg-background p-1 shadow-sm" aria-hidden>
+              <span className="h-1.5 w-full rounded-[1px] bg-primary" />
+              <span className="flex flex-1 gap-0.5">
+                <span className="flex-1 rounded-[1px] border border-border bg-card" />
+                <span className="w-2 rounded-[1px] bg-seal/80" />
+              </span>
+            </span>
             <span className={theme === t.value ? 'font-medium' : ''}>{t.label}</span>
             {theme === t.value && <Check className="ml-auto h-4 w-4 text-primary" />}
           </DropdownMenuItem>

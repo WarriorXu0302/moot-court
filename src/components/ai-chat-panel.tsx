@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppStore } from '@/lib/store';
 import { Send, Volume2, VolumeX, Loader2, Mic, MicOff } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { CopyButton } from '@/components/copy-button';
 import remarkGfm from 'remark-gfm';
 import remarkCjkFriendly from 'remark-cjk-friendly';
 import type { ChatMessage } from '@/lib/types';
@@ -219,6 +220,7 @@ export function AIChatPanel({
                   {msg.content}
                 </ReactMarkdown>
               </div>
+              {msg.role !== 'user' && <div className="-mb-1 mt-1 flex"><CopyButton text={msg.content} className="-ml-1.5" /></div>}
             </div>
           </div>
         ))}

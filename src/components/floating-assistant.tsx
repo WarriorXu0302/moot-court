@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
+import { useDraggableFab } from '@/hooks/use-draggable-fab';
+import { CopyButton } from '@/components/copy-button';
 import { useAppStore } from '@/lib/store';
 import { Send, Scale, X, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -44,6 +46,8 @@ export function FloatingAssistant({ pageContext }: FloatingAssistantProps) {
 
   const caseType = normalizeCaseType(selectedCase?.caseType);
   const isArbitration = isAdversarial(caseType);
+  // "问 AI" 按钮可拖动（展开 AI 助教时它会挡住思考题和发送键），位置记在本地
+  const fab = useDraggableFab<HTMLButtonElement>('ask-ai');
   const isCivil = caseType === 'civil';
   const roleLabel = selectedRole ? getRoleLabel(caseType, selectedRole) : '学生';
 
@@ -174,9 +178,13 @@ ${caseContext}
       {/* Floating button */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
-          aria-label="打开 AI 助手"
-          className="fixed bottom-6 right-6 z-40 flex h-12 items-center gap-2 rounded-full border bg-card pl-3 pr-4 text-sm font-medium text-foreground shadow-lg transition-colors hover:bg-accent"
+          ref={fab.ref}
+          {...fab.handlers}
+          style={fab.style}
+          onClick={fab.guardClick(() => setIsOpen(true))}
+          aria-label="打开 AI 助手（可拖动）"
+          title="点击打开 AI 助手；按住可拖到别处"
+          className="fixed bottom-6 right-6 z-40 flex h-12 touch-none select-none cursor-grab items-center gap-2 rounded-full border bg-card pl-3 pr-4 text-sm font-medium text-foreground shadow-lg transition-colors hover:bg-accent active:cursor-grabbing"
         >
           {/* 原先 72px 方块 + 常驻红点 + 持续脉冲动画，在任何页面都抢走注意力；现在是一个安静的入口 */}
           <span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground">
@@ -219,6 +227,7 @@ ${caseContext}
                     <div className="markdown-content">
                       <ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkFriendly]}>{msg.content}</ReactMarkdown>
                     </div>
+                    {msg.role !== 'user' && <div className="-mb-1 mt-1 flex"><CopyButton text={msg.content} className="-ml-1.5" /></div>}
                   </div>
                 </div>
               ))

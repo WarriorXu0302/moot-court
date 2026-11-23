@@ -38,6 +38,15 @@ export function buildArbitrationFileSections(c: CaseData | null | undefined): Ca
   ];
 }
 
+/** 案件基本资料的大纲分区（阶段 → 小节）；没有大纲时整段原文作为一个小节 */
+export function buildCaseOutlineSections(c: CaseData | null | undefined): CaseFileSection[] | null {
+  const outline = c?.meta?.outline;
+  if (outline && outline.length > 0) {
+    return outline.map((st) => ({ label: st.stage, items: st.sections.map((sec) => ({ title: sec.title, book: sec.text })) }));
+  }
+  return c?.case ? [{ label: '案情', items: [{ title: '基本案情', book: c.case }] }] : null;
+}
+
 /** 取某角色的人设资料（name 包含 speaker 或反之） */
 export function findPerson(c: CaseData | null | undefined, speaker: string): PersonData | undefined {
   const list = parsePersonData(c?.person).filter((p) => p.name);

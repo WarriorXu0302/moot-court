@@ -11,6 +11,8 @@ import remarkCjkFriendly from 'remark-cjk-friendly';
 import { type HighlightConfig, type HighlightItem, HIGHLIGHT_ROLES, ROLE_HIGHLIGHT_LABELS, getHighlightsForRoles, sectionLabelToField, getRoleHighlightClass } from '@/lib/highlights';
 import { useAppStore } from '@/lib/store';
 import type { Annotation as StoreAnnotation } from '@/lib/types';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { linkifyCitations, matchLawItem, type Citation } from '@/lib/law-citations';
 
 export interface CaseFileItem {
   title: string;
@@ -42,6 +44,8 @@ interface CaseFileViewerProps {
   defaultOpenKey?: string | null;
   /** 标题栏显示【标记文字】【取消标记】（类似法考答题界面）：选中文字后点击，黄色底色标出 */
   markTools?: boolean;
+  /** 传入本案法律依据条目（"标题：内容"）时，正文中的法条引用变成可点击、弹出该条原文 */
+  lawItems?: string[];
   /**
    * 批注作用域：批注存在全局 store、按条目下标定位。页面上同时有多个查看器时（案件基本资料 + 卷宗），
    * 必须给不同前缀，否则两边下标相同的条目会互相串批注。
@@ -70,6 +74,7 @@ export function CaseFileViewer({
   defaultOpenKey = null,
   markTools = false,
   annotationScope = '',
+  lawItems,
 }: CaseFileViewerProps) {
   const [openItemKey, setOpenItemKey] = useState<string | null>(defaultOpenKey);
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set());
@@ -300,6 +305,7 @@ export function CaseFileViewer({
         content={content}
         annotations={itemAnnotations}
         highlights={highlights}
+        lawItems={lawItems}
       />
     );
   };
@@ -376,7 +382,7 @@ export function CaseFileViewer({
       )}
 
       <div className="flex-1 flex min-h-0">
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-2 space-y-1">
             {sections.map((section, sIdx) => {
               const isCollapsed = collapsedSections.has(sIdx);
@@ -407,16 +413,17 @@ export function CaseFileViewer({
                         return (
                           <div key={iIdx}>
                             <button
-                              className="flex items-center w-full px-2 py-1 text-sm rounded text-left hover:bg-accent"
+                              className="flex items-start w-full px-2 py-1 text-sm rounded text-left hover:bg-accent"
                               onClick={() => toggleItem(key)}
                             >
                               {isOpen ? (
-                                <ChevronDown className="h-3 w-3 mr-1 shrink-0" />
+                                <ChevronDown className="h-3 w-3 mr-1 mt-1 shrink-0" />
                               ) : (
-                                <ChevronRight className="h-3 w-3 mr-1 shrink-0" />
+                                <ChevronRight className="h-3 w-3 mr-1 mt-1 shrink-0" />
                               )}
-                              <FileText className="h-3 w-3 mr-1.5 shrink-0 text-muted-foreground" />
-                              <span className="truncate">{item.title}</span>
+                              <FileText className="h-3 w-3 mr-1.5 mt-1 shrink-0 text-muted-foreground" />
+                              {/* 栏宽拖窄时标题换行显示，不再截断成"…"（原先长标题如企业信用信息公示报告看不全） */}
+                              <span className="min-w-0 break-words leading-snug">{item.title}</span>
                             </button>
 
                             {isOpen && (
@@ -456,7 +463,7 @@ export function CaseFileViewer({
                         >
                           {isOpen ? <ChevronDown className="h-3 w-3 mr-1 shrink-0" /> : <ChevronRight className="h-3 w-3 mr-1 shrink-0" />}
                           <FileText className="h-3 w-3 mr-1.5 shrink-0 text-muted-foreground" />
-                          <span className="truncate">{item.title}</span>
+                          <span className="min-w-0 break-words leading-snug">{item.title}</span>
                         </button>
                         {isOpen && (
                           <div className="ml-4 mt-1 mb-2 p-3 bg-destructive/5 rounded text-sm max-h-48 overflow-y-auto scroll-thin border-l-2 border-destructive/30 markdown-content">
@@ -840,12 +847,24 @@ function AnnotationRenderer({
   content,
   annotations,
   highlights,
+  lawItems,
 }: {
   content: string;
   annotations: Annotation[];
   highlights: HighlightItem[];
+  lawItems?: string[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const linked = useMemo(() => (lawItems ? linkifyCitations(content) : null), [content, lawItems]);
+  // components 必须稳定：每次渲染换新函数，React 会重挂载链接节点，与下方直接改 DOM 的标记/高亮冲突
+  const mdComponents = useMemo(() => (linked ? {
+    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
+      const m = href?.match(/^#law-cite-(\d+)$/);
+      const cite = m ? linked.cites[Number(m[1])] : undefined;
+      if (!cite) return <a href={href}>{children}</a>;
+      return <LawCitation cite={cite} lawItems={lawItems ?? []}>{children}</LawCitation>;
+    },
+  } : undefined), [linked, lawItems]);
 
   // Apply annotations + highlights to the DOM after React renders
   useEffect(() => {
@@ -904,8 +923,11 @@ function AnnotationRenderer({
 
   return (
     <div ref={containerRef} className="annotation-content">
-      <ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkFriendly]}>
-        {content}
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkCjkFriendly]}
+        components={mdComponents}
+      >
+        {linked ? linked.md : content}
       </ReactMarkdown>
     </div>
   );
@@ -975,5 +997,42 @@ function WrongModal({ content, onClose, onContentChange }: { content: string; on
         </div>
       </div>
     </div>
+  );
+}
+
+/** 案情中的法条引用：点击弹出本案法律依据里对应的条文；未收录时给官方数据库入口 */
+function LawCitation({ cite, lawItems, children }: { cite: Citation; lawItems: string[]; children: React.ReactNode }) {
+  const item = matchLawItem(cite, lawItems);
+  const idx = item ? item.search(/[：:]/) : -1;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        {/* 用 span 而不是 button：button 在长引用换行时会变成独立的居中块，打断正文 */}
+        <span
+          role="button"
+          tabIndex={0}
+          className="cursor-pointer text-primary underline decoration-dotted underline-offset-4 hover:decoration-solid"
+          title="点击查看法条原文"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } }}
+        >
+          {children}
+        </span>
+      </PopoverTrigger>
+      <PopoverContent className="w-[min(28rem,90vw)] text-sm" align="start">
+        <p className="mb-1.5 font-semibold text-foreground">{cite.raw}</p>
+        {item ? (
+          <>
+            <p className="whitespace-pre-wrap leading-relaxed text-foreground/90">{idx >= 0 ? item.slice(idx + 1).trim() : item}</p>
+            <p className="mt-2 border-t pt-1.5 text-xs text-muted-foreground">出自本案「相关法律依据」，请以法律原文核对现行有效版本。</p>
+          </>
+        ) : (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            本平台暂未收录该条原文。可到
+            <a className="mx-0.5 text-primary underline underline-offset-2" href="https://flk.npc.gov.cn/" target="_blank" rel="noopener noreferrer">国家法律法规数据库</a>
+            查阅。
+          </p>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
