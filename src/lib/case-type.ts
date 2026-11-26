@@ -48,10 +48,52 @@ export interface ArbitrationMeta {
    */
   outline?: CaseOutlineStage[];
   /**
+   * 庭审设定：开庭时会被问到、但判决书类教材原文通常没有的信息（代理权限、证人知情范围、专家背景）。
+   * 由 scripts/enrich-hearing.ts 依案情生成，登记在 reference.aiDrafted 的 hearingSetup 里，教师可改。
+   * 不含裁判结论，学生可见（作为卷宗里的授权委托书、证人与专家情况说明）。
+   */
+  hearingSetup?: HearingSetup;
+  /**
    * 教师专属参考资料（标准答案与出处）。**学生接口必须剪掉此字段**（见 api/cases 的 stripTeacherOnly）：
    * 裁判要旨与法理分析就是本案的答案，学生可见则训练失去意义。
    */
   reference?: CaseReference;
+}
+
+export interface PartyAuthority {
+  /** 当事人名称（多个当事人用"、"分隔） */
+  party: string;
+  /** 特别授权 / 一般代理 */
+  authority: '特别授权' | '一般代理';
+  /** 授权事项，如"代为承认、放弃、变更诉讼请求，进行和解，提起反诉或上诉" */
+  scope: string;
+}
+
+export interface HearingSetup {
+  claimant: PartyAuthority;
+  respondent: PartyAuthority;
+  /** 没有委托代理人出庭的当事人（多被告案件常见），开庭时按缺席处理 */
+  absent?: { party: string; side: 'claimant' | 'respondent'; note: string }[];
+  witness?: {
+    /** 身份（职务、任职期间），不含姓名 */
+    identity: string;
+    /** 与双方当事人的关系 */
+    relation: string;
+    /** 亲身经历、能直接作证的事实（依案情与笔录，逐条） */
+    knows: string[];
+    /** 不知道或不是本人经手的事项（被问到时如实说不知道） */
+    unknown: string[];
+  };
+  expert?: {
+    /** 专业背景（不含真实姓名、学校） */
+    background: string;
+    /** 由谁申请或由法庭通知出庭 */
+    appointedBy: string;
+    /** 与双方有无利害关系 */
+    interest: string;
+    /** 本次意见的范围（只涉及哪些法律问题） */
+    scope: string;
+  };
 }
 
 export interface CaseOutlineStage {
@@ -106,6 +148,7 @@ export function parseArbitrationMeta(raw: unknown): ArbitrationMeta | undefined 
     issues: Array.isArray(o.issues) ? o.issues.filter((i) => i && typeof i.title === 'string') : [],
     keywords: Array.isArray(o.keywords) ? o.keywords.filter((k): k is string => typeof k === 'string' && k.trim().length > 0) : undefined,
     outline: Array.isArray(o.outline) ? o.outline.filter((st) => st && typeof st.stage === 'string' && Array.isArray(st.sections)) : undefined,
+    hearingSetup: o.hearingSetup && typeof o.hearingSetup === 'object' && (o.hearingSetup as HearingSetup).claimant ? (o.hearingSetup as HearingSetup) : undefined,
     reference: o.reference && typeof o.reference === 'object' ? (o.reference as CaseReference) : undefined,
   };
 }

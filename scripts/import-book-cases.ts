@@ -218,9 +218,11 @@ async function importOne(i: number, b: BookCase, dry: boolean, existing: Set<str
  * 只改 case_type 的话角色设定（首席仲裁员…）、文书（仲裁申请书…）都对不上庭审流程，必须整套重生成。
  */
 async function regenerateExisting(i: number, b: BookCase, dry: boolean): Promise<string> {
-  const type = decideType(b);
+  // --type=civil|arbitration 可强制指定类型：第十六章里有些案例实为法院审查程序（如恒基案：法院审查仲裁协议效力）
+  const forced = flag('type');
+  const type: AdversarialCaseType = forced === 'civil' || forced === 'arbitration' ? forced : decideType(b);
   const db = getSupabaseClient();
-  const { data: rows, error } = await db.from('cases').select('id,name,status,case_type');
+  const { data: rows, error } = await db.from('cases').select('id,name,status,case_type,meta');
   if (error) throw error;
   const key = (b.caseName || caseTitle(b)).slice(0, 12);
   const hit = (rows ?? []).filter((r) => String(r.name).includes(key) || key.includes(String(r.name).slice(0, 12)));
@@ -239,6 +241,9 @@ async function regenerateExisting(i: number, b: BookCase, dry: boolean): Promise
       aiDrafted: [...NEED],
     },
   };
+  // 保留与类型无关的派生数据（案情大纲、涉及领域）；庭审设定与类型相关（角色名不同），清掉后用 enrich-hearing.ts 重生成
+  const old = (cur.meta ?? {}) as { outline?: unknown; keywords?: unknown };
+  Object.assign(meta, { outline: old.outline, keywords: old.keywords });
   // 评分标准按旧类型生成的环节 key（arb-*）对不上新类型，一并清空，由教师端重新生成
   const patch = {
     profile: ai.profile, teach: ai.teach, case_info: clean(b.facts),

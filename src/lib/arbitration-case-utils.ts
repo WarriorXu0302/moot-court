@@ -32,10 +32,28 @@ export function buildArbitrationFileSections(c: CaseData | null | undefined): Ca
   if (!c) return [];
   return [
     { label: c.caseType === 'civil' ? '诉讼文书卷' : '仲裁文书卷', items: parseCaseItems(c.plead) },
-    { label: '证人与专家陈述', items: parseCaseItems(c.record) },
+    { label: '证人与专家陈述', items: [...parseCaseItems(c.record), ...hearingSetupItems(c).people] },
+    ...(hearingSetupItems(c).authority.length ? [{ label: '授权委托书', items: hearingSetupItems(c).authority }] : []),
     { label: '证据材料', items: parseCaseItems(c.evidence) },
     { label: '法律依据', items: parseCaseItems(c.law) },
   ];
+}
+
+/** 庭审设定 → 卷宗条目：授权委托书（双方）、证人与专家出庭情况说明 */
+export function hearingSetupItems(c: CaseData | null | undefined): { authority: Item[]; people: Item[] } {
+  const h = c?.meta?.hearingSetup;
+  if (!h) return { authority: [], people: [] };
+  const civil = c?.caseType === 'civil';
+  const [a, b] = civil ? ['原告', '被告'] : ['申请人', '被申请人'];
+  const auth = (side: string, p: typeof h.claimant): Item => ({
+    title: `${side}授权委托书（摘要）`,
+    book: `委托人：${p.party}\n受托人：${side}委托${civil ? '诉讼' : ''}代理人\n代理权限：${p.authority}\n授权事项：${p.scope}`,
+  });
+  const people: Item[] = [];
+  if (h.witness) people.push({ title: '证人出庭情况说明', book: `身份：${h.witness.identity}\n与当事人的关系：${h.witness.relation}\n能够作证的事实：\n${h.witness.knows.map((k) => `- ${k}`).join('\n')}` });
+  if (h.expert) people.push({ title: `${civil ? '外国法查明专家' : '专家证人'}出庭情况说明`, book: `专业背景：${h.expert.background}\n出庭依据：${h.expert.appointedBy}\n利害关系：${h.expert.interest}\n意见范围：${h.expert.scope}` });
+  if (h.absent?.length) people.push({ title: '当事人到庭情况', book: h.absent.map((x) => `${x.side === 'claimant' ? a : b}${x.party}：${x.note}`).join('\n') });
+  return { authority: [auth(a, h.claimant), auth(b, h.respondent)], people };
 }
 
 /** 案件基本资料的大纲分区（阶段 → 小节）；没有大纲时整段原文作为一个小节 */
@@ -86,6 +104,23 @@ export function buildArbitrationContext(c: CaseData | null | undefined, document
     part('法律依据', c.law) +
     part(civil ? '原告提交的民事起诉状（学生撰写）' : '申请人提交的仲裁申请书（学生撰写）', documents.claim) +
     part(civil ? '被告提交的答辩状（学生撰写）' : '被申请人提交的答辩状（学生撰写）', documents.answer) +
-    part('角色资料', c.person)
+    part('角色资料', c.person) +
+    part('庭审设定（各方出庭时据此回答身份、代理权限、知情范围等问题）', hearingSetupText(c))
   );
+}
+
+/** 庭审设定 → 提示词文本（含证人"不知道的事项"，这部分不放进学生卷宗） */
+export function hearingSetupText(c: CaseData | null | undefined): string {
+  const h = c?.meta?.hearingSetup;
+  if (!h) return '';
+  const civil = c?.caseType === 'civil';
+  const [a, b] = civil ? ['原告代理人', '被告代理人'] : ['申请人代理人', '被申请人代理人'];
+  const lines = [
+    `${a}：受${h.claimant.party}委托，${h.claimant.authority}；授权事项：${h.claimant.scope}`,
+    `${b}：受${h.respondent.party}委托，${h.respondent.authority}；授权事项：${h.respondent.scope}`,
+  ];
+  for (const x of h.absent ?? []) lines.push(`未委托代理人出庭的当事人：${x.party}（${x.side === 'claimant' ? (civil ? '原告' : '申请人') : (civil ? '被告' : '被申请人')}）——${x.note}`);
+  if (h.witness) lines.push(`证人：${h.witness.identity}；与当事人的关系：${h.witness.relation}；能作证的事实：${h.witness.knows.join('；')}；不知道或非本人经手的事项：${h.witness.unknown.join('；')}`);
+  if (h.expert) lines.push(`${civil ? '外国法查明专家' : '专家证人'}：${h.expert.background}；出庭依据：${h.expert.appointedBy}；利害关系：${h.expert.interest}；意见范围：${h.expert.scope}`);
+  return lines.join('\n');
 }

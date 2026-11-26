@@ -25,4 +25,11 @@ export interface StageDef {
   responder?: string;
   /** interactive 阶段给用户的操作提示 */
   hint?: string;
+  /**
+   * 发问类 ai 环节的问答轮数（默认 1）：发问方每轮只问一个问题、对方回答，最多 rounds 轮，
+   * 发问方说"询问完毕"即提前结束。原先一次发言里连问七八个问题、证人一口气答完，像书面问卷（模拟器审阅）。
+   */
+  rounds?: number;
+  /** 学生发问的 interactive 环节最多可问几次（默认 1）：每问一次 responder 回答一次，学生可随时点「下一环节」结束 */
+  multiTurn?: number;
 }

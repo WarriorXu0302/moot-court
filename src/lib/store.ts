@@ -53,6 +53,12 @@ interface AppState {
 
   // Case file annotations (persist across page navigation within session)
   caseAnnotations: Annotation[];
+  /**
+   * 庭审各阶段的进度快照（key = 阶段名，如"庭审调查"）：从下一步点「上一步」回来时恢复笔录与环节位置，
+   * 原先回到庭审页一切从头开始，之前的发言痕迹全部丢失。只存内存，随本次训练结束清空。
+   */
+  hearingProgress: Record<string, { messages: ChatMessage[]; stageIdx: number }>;
+  saveHearingProgress: (key: string, p: { messages: ChatMessage[]; stageIdx: number }) => void;
 
   // Document evaluation progress (AI样例解锁依据): `${caseId}:${docType}` -> { evalCount, bestScore }
   docProgress: Record<string, { evalCount: number; bestScore: number }>;
@@ -112,6 +118,7 @@ export const useAppStore = create<AppState>()(
       lifecycleVisible: true,
       questionAutoAdvance: false,
       caseAnnotations: [],
+      hearingProgress: {},
       docProgress: {},
       trainingStartTime: null,
 
@@ -134,7 +141,7 @@ export const useAppStore = create<AppState>()(
           createdAt: u.createdAt || new Date().toISOString(),
         }
       }),
-      logout: () => set({ user: null, selectedRole: null, selectedCase: null, documents: {}, learningRecords: [], stageDialogues: [], behaviorLog: [], docProgress: {}, trainingStartTime: null }),
+      logout: () => set({ user: null, selectedRole: null, selectedCase: null, documents: {}, learningRecords: [], stageDialogues: [], behaviorLog: [], docProgress: {}, trainingStartTime: null, hearingProgress: {} }),
       setSelectedRole: (r) => set({ selectedRole: r }),
       setSelectedCase: (c) => set((state) => {
         // Clear documents when switching to a different case to prevent stale data
@@ -142,7 +149,7 @@ export const useAppStore = create<AppState>()(
         return {
           selectedCase: c,
           // 切换案例 = 开始新训练：清空学习记录、对话快照与行为轨迹
-          ...(isSameCase ? {} : { documents: {}, learningRecords: [], stageDialogues: [], behaviorLog: [] }),
+          ...(isSameCase ? {} : { documents: {}, learningRecords: [], stageDialogues: [], behaviorLog: [], hearingProgress: {} }),
         };
       }),
       addLearningRecord: (r) => set((s) => ({ learningRecords: [...s.learningRecords, r] })),
@@ -189,6 +196,7 @@ export const useAppStore = create<AppState>()(
       setQuestionAutoAdvance: (v) => set({ questionAutoAdvance: v }),
       setLifecycleVisible: (v) => set({ lifecycleVisible: v }),
       addCaseAnnotation: (a) => set((s) => ({ caseAnnotations: [...s.caseAnnotations, a] })),
+      saveHearingProgress: (key, p) => set((s) => ({ hearingProgress: { ...s.hearingProgress, [key]: p } })),
       removeCaseAnnotation: (id) => set((s) => ({ caseAnnotations: s.caseAnnotations.filter((a) => a.id !== id) })),
       clearCaseAnnotations: () => set({ caseAnnotations: [] }),
       recordDocEval: (caseId, docType, score) => set((s) => {
@@ -211,6 +219,7 @@ export const useAppStore = create<AppState>()(
         lifecycleLoading: false,
         lifecycleVisible: true,
         caseAnnotations: [],
+        hearingProgress: {},
         selectedRole: null,
         selectedCase: null,
       }),

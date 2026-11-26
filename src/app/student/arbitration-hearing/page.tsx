@@ -18,7 +18,8 @@
 
 import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, Send, SkipForward, Mic, Square } from 'lucide-react';
+import { Loader2, Send, SkipForward, Mic, Square, Check } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkCjkFriendly from 'remark-cjk-friendly';
@@ -37,20 +38,16 @@ import { useStageDialogueLogger } from '@/hooks/use-stage-logger';
 import { useAppStore } from '@/lib/store';
 import { getFlow, type FlowPhase, type StageDef } from '@/lib/flows';
 import { getRoleLabel } from '@/lib/case-type';
-import { buildArbitrationContext, buildArbitrationFileSections, findPerson } from '@/lib/arbitration-case-utils';
+import { buildArbitrationContext, buildArbitrationFileSections } from '@/lib/arbitration-case-utils';
 import { getArbitrationNextRoute } from '@/lib/arbitration-route';
+import { buildHearingSystemPrompt, buildHearingUserContent, finalizeHearingText, responderForUserTurn, hearingReplyFormat, isQuestioningDone, type PromptOpts, type HearingCtx, type HearingMode } from '@/lib/hearing-engine';
 import { getForumProfile, adversarialType } from '@/lib/forum-profile';
 import { parseHighlights } from '@/lib/highlights';
-import { replyFormatInstruction } from '@/lib/response-style';
 import { createThrottledStreamSetter } from '@/lib/streaming-throttle';
 import { createTtsSentenceFeeder, interruptTts, setTtsSpeakerCallback, waitForTtsQueueDrain } from '@/lib/audio';
 import { fetchSummarySections, STAGE_SUMMARY_FORMAT_INSTRUCTION } from '@/lib/summary-stream';
 import { extractScore } from '@/lib/writing-outline';
-import {
-  parseLifecycleFromAIResponse,
-  stripLifecycleForStreaming,
-  hasVisibleStream,
-} from '@/lib/lifecycle-utils';
+import { stripLifecycleForStreaming, hasVisibleStream } from '@/lib/lifecycle-utils';
 import { advanceArbitrationLifecycle } from '@/lib/arbitration-study';
 import type { ChatMessage, LearningRecordEntry, UserRole } from '@/lib/types';
 
@@ -80,6 +77,7 @@ function ArbitrationHearingInner() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   useStageDialogueLogger(pageName, messages);
+  const userSpoke = messages.some((m) => m.role === 'user');
 
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -90,6 +88,9 @@ function ArbitrationHearingInner() {
   useEffect(() => { voiceModeRef.current = voiceMode; }, [voiceMode]);
 
   const [currentStageIdx, setCurrentStageIdx] = useState(0);
+  // 当前环节内学生已发问的次数（multiTurn 环节用），换环节清零
+  const [stageTurns, setStageTurns] = useState(0);
+  useEffect(() => { setStageTurns(0); }, [currentStageIdx]);
   const [showContinueModal, setShowContinueModal] = useState(false);
   const [continueLoading, setContinueLoading] = useState(false);
   const [continueStream, setContinueStream] = useState('');
@@ -122,67 +123,33 @@ function ArbitrationHearingInner() {
   }, [messages, streamingText]);
 
   const contextData = buildArbitrationContext(selectedCase, documents);
-  const caseFileSections = buildArbitrationFileSections(selectedCase);
+  // 卷宗最前面放学生上一环节写的文书（起诉状 / 答辩状等），庭审陈述时可以对照自己的文书
+  const myDocs = (['claim', 'answer', 'award'] as const)
+    .filter((d) => (documents[d] ?? '').trim())
+    .map((d) => ({ title: `${profile.docs[d].title}（我撰写的）`, book: documents[d] }));
+  const caseFileSections = [
+    ...(myDocs.length ? [{ label: '我的文书', items: myDocs }] : []),
+    ...buildArbitrationFileSections(selectedCase),
+  ];
   const highlightConfig = parseHighlights(selectedCase?.highlights);
 
-  /** 构造某发言者的系统提示词 */
-  /**
-   * AI 阶段发言的环节说明：告诉 AI 当前是哪个环节、下一环节由谁做什么。
-   * 原先只说"推演庭审进展"，AI 不知道环节边界，会自行插入流程里没有的步骤
-   * （如首席仲裁员要求申请人核对身份，但阶段表里没有这一轮，学生没机会回答，流程直接跳走）。
-   */
-  const stageInstruction = (label: string): string => {
-    const idx = STAGES.findIndex((st) => st.label === label);
-    const next = idx >= 0 ? STAGES[idx + 1] : undefined;
-    const nextText = next
-      ? `下一环节是「${next.label}」，由${next.speaker}${next.type === 'interactive' ? `（即用户扮演的${roleLabel}）` : ''}进行。`
-      : '本环节是本阶段的最后一个环节。';
-    return `当前程序环节：「${label}」。你只完成这一个环节应做的事，${nextText}
-- 可以在发言结尾按下一环节的内容点名下一位发言人（如"请${next?.speaker ?? '各方'}……"），但不要提出与下一环节无关的要求；
-- 不要插入阶段表以外的程序步骤（如额外核实身份、额外提问后等待回答），也不要替下一位发言人回答。`;
-  };
+  // 提示词与规则集中在 lib/hearing-engine.ts（scripts/hearing-sim.ts 整场模拟用的是同一份）
+  const hearingCtx: HearingCtx = { caseData: selectedCase, profile, phase, pageName, role, roleLabel, stages: STAGES };
+  const buildSystemPrompt = (speaker: string, mode: HearingMode, arg: string, opts: PromptOpts = {}): string => buildHearingSystemPrompt(hearingCtx, speaker, mode, arg, opts);
 
-  const buildSystemPrompt = (speaker: string, mode: 'stage' | 'respond' | 'user-reply', arg: string): string => {
-    const person = findPerson(selectedCase, speaker);
-    const personText = person ? `\n你的角色设定：${person.set}\n你应当如实陈述或坚持的核心信息：${person.message}\n` : '';
-    const intro =
-      mode === 'respond'
-        ? `刚才${arg}向你提问或发言（见对话记录最后一条），请你以${speaker}的身份回应。注意：你是被询问的对象，只回应刚才的提问，不要代替${arg}或其他任何角色发言，更不要自行继续提问。`
-        : mode === 'user-reply'
-          ? `用户（${roleLabel}）刚刚发言："${arg}"，请你以${speaker}的身份简短回应。注意：你只扮演${speaker}，不要代替${roleLabel}发言。**回应以陈述收尾，不要向${roleLabel}追问或要求其补充回答**——用户在本环节没有再次发言的机会，追问会让问题悬空；需要追问的内容留到后面的"${profile.tribunalQuestionStage}"环节。`
-          : stageInstruction(arg);
-    const knowledge = phase === 'investigation' ? profile.investigationKnowledge : profile.debateKnowledge;
-    return `你正在模拟一场${profile.hearingName}（${pageName}）。你当前扮演的角色是"${speaker}"。
-${personText}
-${intro}
-
-可获取的资料：案件基本资料、${profile.pleadLabel}、证人与专家陈述笔录、证据材料、法律依据（见上下文）。${speaker === '证人' || speaker.includes('专家') ? '你只知道自己亲身经历或专业范围内的事实，不知道其他人的证言。' : ''}
-
-请注意：
-- 发言须符合角色身份与庭审语境，各角色的字数与语言风格必须严格符合下方【发言风格要求】（宣读法律文书、证据清单原文时按完整篇幅，不受此限）
-- 依据案件资料发言，不得编造案情之外的事实、金额、日期
-- 严禁代替其他角色发言，只扮演"${speaker}"这一个角色
-- 如果用户（${roleLabel}）提出明显偏离案件事实或法律规定的主张，不必顺着答，应指出差异并引导回到合法合理的论证路径
-
-以下是程序与法律适用相关知识，供参考（具体条文号以法律或规则原文为准，不要自行编造条文号）：
-
-${knowledge.join('\n\n')}
-
-${phase === 'investigation' ? profile.investigationStyle : profile.debateStyle}`;
-  };
-
-  const streamAIResponse = useCallback(async (prompt: string, speaker: string, playTts = true) => {
+  const streamAIResponse = useCallback(async (prompt: string, speaker: string, playTts = true, opts: PromptOpts = {}): Promise<string> => {
+    let finalText = '';
     setIsStreaming(true);
     setStreamingText('');
     setStreamingSpeaker(speaker);
 
-    let mode: 'stage' | 'respond' | 'user-reply' = 'stage';
+    let mode: HearingMode = 'stage';
     let arg = '';
     if (prompt.startsWith(AI_RESPOND)) { mode = 'respond'; arg = prompt.slice(AI_RESPOND.length); }
     else if (prompt.startsWith(USER_SAYS)) { mode = 'user-reply'; arg = prompt.slice(USER_SAYS.length); }
     else { arg = prompt; }
 
-    const systemPrompt = buildSystemPrompt(speaker, mode, arg);
+    const systemPrompt = buildSystemPrompt(speaker, mode, arg, opts);
     const controller = new AbortController();
     abortRef.current = controller;
     const timeoutId = setTimeout(() => controller.abort(), 90000);
@@ -195,14 +162,10 @@ ${phase === 'investigation' ? profile.investigationStyle : profile.debateStyle}`
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: systemPrompt + replyFormatInstruction(voiceModeRef.current) },
+            { role: 'system', content: systemPrompt + hearingReplyFormat(voiceModeRef.current) },
             {
               role: 'user',
-              content:
-                contextData +
-                '\n\n已有对话:\n' +
-                messagesRef.current.map((m) => `${m.speaker}: ${m.content}`).join('\n') +
-                '\n\n当前阶段: ' + (mode === 'stage' ? prompt : mode === 'respond' ? `回应${arg}` : `回应${roleLabel}`),
+              content: buildHearingUserContent(contextData, messagesRef.current, mode, prompt, arg, roleLabel),
             },
           ],
           temperature: 0.7,
@@ -237,10 +200,12 @@ ${phase === 'investigation' ? profile.investigationStyle : profile.debateStyle}`
           } catch { /* skip */ }
         }
       }
+      finalText = finalizeHearingText(speaker, fullText);
       const msg: ChatMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         role: 'assistant',
-        content: parseLifecycleFromAIResponse(fullText),
+        // 兜底：当事人发言末尾替主持人安排程序的句子剪掉（提示词已禁止，模型偶尔仍会说）
+        content: finalText,
         timestamp: Date.now(),
         speaker,
       };
@@ -261,6 +226,7 @@ ${phase === 'investigation' ? profile.investigationStyle : profile.debateStyle}`
       setStreamingSpeaker('');
       abortRef.current = null;
     }
+    return finalText;
     // buildSystemPrompt 依赖 selectedCase/phase/roleLabel，这里随之重建
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contextData, phase, roleLabel, selectedCase, profile]);
@@ -274,29 +240,49 @@ ${phase === 'investigation' ? profile.investigationStyle : profile.debateStyle}`
   const runAIStage = useCallback(async (stageIdx: number): Promise<void> => {
     const stage = STAGES[stageIdx];
     if (!stage) return;
-    await streamAIResponse(stage.label, stage.speaker, true);
-    if (voiceModeRef.current) await waitForTtsQueueDrain(8);
-    // 发问类阶段：被问角色回答刚才的提问（必须配 responder，见 flows/arbitration.ts）
-    if (stage.responder && stage.responder === roleLabel) {
-      // 被问的是学生本人：不能由 AI 代答，停在下一环节等学生（阶段表应已拆分，这里是兜底）
-      if (stageIdx + 1 < STAGES.length) setCurrentStageIdx(stageIdx + 1);
-      return;
-    }
-    if (stage.responder && !userInteractedRef.current) {
-      await streamAIResponse(`${AI_RESPOND}${stage.speaker}`, stage.responder, true);
+    // 发问类环节可多轮问答（stage.rounds）：每轮问一个问题、对方回答；发问方说"询问完毕"即结束
+    const n = stage.rounds ?? 1;
+    for (let k = 1; k <= n; k++) {
+      const said = await streamAIResponse(stage.label, stage.speaker, true, { stageId: stage.id, round: n > 1 ? { k, n } : undefined });
       if (voiceModeRef.current) await waitForTtsQueueDrain(8);
+      // 发问类阶段：被问角色回答刚才的提问（必须配 responder，见 flows/arbitration.ts）
+      if (stage.responder && stage.responder === roleLabel) {
+        // 被问的是学生本人：不能由 AI 代答，停在下一环节等学生（阶段表应已拆分，这里是兜底）
+        if (stageIdx + 1 < STAGES.length) setCurrentStageIdx(stageIdx + 1);
+        return;
+      }
+      const finished = n > 1 && isQuestioningDone(said);
+      if (stage.responder && !userInteractedRef.current && !(finished && !/[？?]/.test(said))) {
+        await streamAIResponse(`${AI_RESPOND}${stage.speaker}`, stage.responder, true, { stageId: stage.id });
+        if (voiceModeRef.current) await waitForTtsQueueDrain(8);
+      }
+      if (userInteractedRef.current || finished || !said) break;
     }
     if (userInteractedRef.current) { userInteractedRef.current = false; return; }
     if (stageIdx + 1 < STAGES.length) advanceTo(stageIdx + 1, runAIStage);
   }, [STAGES, streamAIResponse, advanceTo]);
 
-  // 进入页面：若首阶段是 ai 则自动开始
+  // 进入页面：有本阶段的进度快照（从下一步点「上一步」回来）就恢复笔录与环节位置；否则首阶段是 ai 时自动开始
+  const progressKey = `${role}:${pageName}`;
+  const saveHearingProgress = useAppStore((st) => st.saveHearingProgress);
   const startedRef = useRef(false);
   useEffect(() => {
     if (startedRef.current || !selectedCase || !user) return;
     startedRef.current = true;
+    const saved = useAppStore.getState().hearingProgress[progressKey];
+    if (saved && saved.messages.length > 0) {
+      messagesRef.current = saved.messages;
+      setMessages(saved.messages);
+      setCurrentStageIdx(Math.min(saved.stageIdx, STAGES.length - 1));
+      return;
+    }
     if (STAGES[0]?.type === 'ai') setTimeout(() => runAIStage(0), 400);
-  }, [STAGES, selectedCase, user, runAIStage]);
+  }, [STAGES, selectedCase, user, runAIStage, progressKey]);
+  // 每次笔录或环节变化都存快照（恢复完成前不写，避免空数组覆盖已有快照）
+  useEffect(() => {
+    if (!startedRef.current || messages.length === 0) return;
+    saveHearingProgress(progressKey, { messages, stageIdx: currentStageIdx });
+  }, [messages, currentStageIdx, progressKey, saveHearingProgress]);
 
   const handleSendMessage = async () => {
     const text = input.trim();
@@ -310,11 +296,16 @@ ${phase === 'investigation' ? profile.investigationStyle : profile.debateStyle}`
     setInput('');
 
     // 回应者：阶段指定的 responder；没有则由对方代理人回应（自由辩论等）
-    const responder = stage?.responder ?? profile.opponentOf[role];
-    await streamAIResponse(`${USER_SAYS}${text}`, responder, true);
-    if (voiceModeRef.current) await waitForTtsQueueDrain(8);
+    const responder = responderForUserTurn(stage, STAGES[currentStageIdx + 1]);
+    if (responder) {
+      await streamAIResponse(`${USER_SAYS}${text}`, responder, true, { stageId: stage?.id });
+      if (voiceModeRef.current) await waitForTtsQueueDrain(8);
+    }
     // 用户发言已被回应，打断语义消费完毕——复位，否则下一个 ai 阶段发言完会被误判为"用户打断"而假死
     userInteractedRef.current = false;
+    // 学生发问的环节可以连续问几次（stage.multiTurn），没问完前留在本环节；说"询问完毕"或点「下一环节」结束
+    const turns = stageTurns + 1;
+    if (stage?.multiTurn && turns < stage.multiTurn && !isQuestioningDone(text)) { setStageTurns(turns); return; }
     if (currentStageIdx + 1 < STAGES.length) advanceTo(currentStageIdx + 1, runAIStage);
   };
 
@@ -337,6 +328,14 @@ ${phase === 'investigation' ? profile.investigationStyle : profile.debateStyle}`
   };
 
   const handleContinue = async () => {
+    // 学生本环节没发过言：不调 AI 打分（原先会把 AI 各角色的发言当成学生表现，跳过不答也能拿 80 多分）
+    if (!userSpoke) {
+      const record: LearningRecordEntry = { pageName, conversations: messages, summary: `本环节学生未发言（${roleLabel}的发言环节均被跳过）。`, evaluation: '本环节没有学生本人的发言，不评分。', suggestion: `建议回到本环节，在「轮到你发言」时以${roleLabel}身份完成陈述、举证、质证等任务。`, score: undefined, createdAt: Date.now() };
+      setContinueRecord(record);
+      addLearningRecord(record);
+      setShowContinueModal(true);
+      return;
+    }
     setShowContinueModal(true);
     setContinueLoading(true);
     const allRecords = learningRecords.map((r) => `${r.pageName}: ${r.summary}`).join('\n');
@@ -348,8 +347,10 @@ ${contextData}
 ## 程序与法律适用知识
 ${(phase === 'investigation' ? profile.investigationKnowledge : profile.debateKnowledge).join('\n')}
 
-对话记录:
-${messages.map((m) => `${m.speaker || m.role}: ${m.content}`).join('\n')}
+对话记录（标【学生】的是学生本人以${roleLabel}身份的发言，其余均为 AI 扮演的角色）:
+${messages.map((m) => `${m.role === 'user' ? `【学生】${roleLabel}` : m.speaker || m.role}: ${m.content}`).join('\n')}
+
+评分要求：**只依据标【学生】的发言**评价与打分。AI 角色（包括 AI 扮演的${roleLabel}以外的任何角色）的发言质量与学生无关，不得计入；学生发言很少或很简略时，得分应相应偏低。
 
 之前的学习记录:
 ${allRecords}
@@ -380,6 +381,11 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
   }
 
   const currentStage = STAGES[currentStageIdx];
+  // 多次发问的环节：已问过至少一次时，提示可以继续问或结束
+  const followUpHint = currentStage?.multiTurn && stageTurns > 0
+    ? `可以继续发问（还可问 ${currentStage.multiTurn - stageTurns} 次），问完点「下一环节」结束询问`
+    : '';
+  const stageHint = followUpHint || currentStage?.hint || `请作为${roleLabel}发言`;
   const speakerNow = streamingSpeaker || ttsSpeaker || currentStage?.speaker || '';
 
   return (
@@ -388,8 +394,8 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
         pageName={pageName}
         onSkip={goNext}
         onContinue={handleContinue}
-        canContinue={messages.length > 0}
-        continueTooltip="请先参与庭审"
+        canContinue={userSpoke}
+        continueTooltip="请先在「轮到你发言」的环节发言，再生成本环节总结"
         onEndAnalysis={handleEndAnalysis}
         showHome
         onHome={() => router.push('/')}
@@ -409,7 +415,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                   {currentStage?.type === 'interactive' && !isStreaming && (
                     <div className="absolute bottom-4 left-1/2 w-[min(36rem,90%)] -translate-x-1/2 z-20">
                       <div className="rounded-md bg-primary px-5 py-2.5 text-center text-sm font-medium text-primary-foreground shadow-lg">
-                        {currentStage.hint || `请作为${roleLabel}发言`}
+                        {stageHint}
                       </div>
                     </div>
                   )}
@@ -422,7 +428,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                     <p className="mb-6 border-b pb-3 text-center font-display text-lg font-semibold tracking-[0.25em] text-foreground">{pageName}笔录</p>
                     {messages.length === 0 && !isStreaming && (
                       <p className="py-8 text-center text-sm text-muted-foreground">
-                        {currentStage?.type === 'interactive' ? (currentStage.hint || `请作为${roleLabel}发言`) : `${pageName}即将开始…`}
+                        {currentStage?.type === 'interactive' ? stageHint : `${pageName}即将开始…`}
                       </p>
                     )}
                     <ol className="space-y-5">
@@ -456,16 +462,45 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
               <div className={`shrink-0 space-y-2 border-t p-3 ${currentStage?.type === 'interactive' && !isStreaming ? 'bg-primary/[0.04]' : 'bg-card'}`}>
                 <div className="flex items-center gap-2">
                   <p className="min-w-0 flex-1 truncate text-sm">
-                    <span className="text-muted-foreground">环节 {currentStageIdx + 1}/{STAGES.length}　</span>
+                    {/* 点开看本阶段完整程序：已完成打勾、当前高亮、学生发言的环节标「你」 */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="mr-1 rounded-sm text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground" title="查看本阶段全部环节">
+                          环节 {currentStageIdx + 1}/{STAGES.length}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" side="top" className="max-h-[60vh] w-[min(30rem,90vw)] overflow-y-auto p-3">
+                        <p className="mb-2 text-xs text-muted-foreground">{pageName}程序</p>
+                        <ol className="space-y-1">
+                          {STAGES.map((st, i) => (
+                            <li key={st.id} className={`flex items-start gap-2 text-sm ${i === currentStageIdx ? 'font-semibold text-foreground' : i < currentStageIdx ? 'text-muted-foreground' : 'text-foreground/80'}`} aria-current={i === currentStageIdx ? 'step' : undefined}>
+                              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] tabular-nums ${i < currentStageIdx ? 'border-primary/50 bg-primary/50 text-primary-foreground' : i === currentStageIdx ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/30'}`}>
+                                {i < currentStageIdx ? <Check className="h-3 w-3" /> : i + 1}
+                              </span>
+                              <span className="min-w-0 flex-1 leading-snug">{st.label}</span>
+                              {st.type === 'interactive' && <span className="shrink-0 rounded-sm bg-seal px-1.5 text-xs font-normal text-seal-foreground">你</span>}
+                            </li>
+                          ))}
+                        </ol>
+                      </PopoverContent>
+                    </Popover>
                     <span className="font-medium">{currentStage?.label}</span>
                     {currentStage?.type === 'interactive' && !isStreaming && <span className="ml-2 rounded-sm bg-seal px-1.5 py-0.5 text-xs text-seal-foreground">轮到你发言</span>}
                   </p>
                   <Button variant="ghost" size="sm" onClick={() => { setVoiceMode(!voiceMode); interruptTts(); }} className="h-8 text-xs">
                     {voiceMode ? '改用文字' : '改用语音'}
                   </Button>
-                  <Button variant="outline" size="sm" className="h-8" onClick={handleNextStage} disabled={isStreaming}>
-                    <SkipForward className="h-3.5 w-3.5" />下一环节
-                  </Button>
+                  {currentStageIdx + 1 < STAGES.length ? (
+                    <Button variant="outline" size="sm" className="h-8" onClick={handleNextStage} disabled={isStreaming}>
+                      <SkipForward className="h-3.5 w-3.5" />下一环节
+                    </Button>
+                  ) : (
+                    // 最后一个环节没有"下一环节"，原先按钮一直可见却点不动；改为结束本阶段：
+                    // 发过言 → 生成本环节总结后进入下一步；没发过言 → 直接进入下一步（与跳过等价）
+                    <Button size="sm" className="h-8" onClick={() => { interruptTts(); if (userSpoke) handleContinue(); else goNext(); }} disabled={isStreaming}>
+                      <SkipForward className="h-3.5 w-3.5" />{userSpoke ? '完成本阶段' : '进入下一步'}
+                    </Button>
+                  )}
                 </div>
 
                 {currentStage?.type === 'interactive' && !voiceMode && (
@@ -473,7 +508,7 @@ ${STAGE_SUMMARY_FORMAT_INSTRUCTION}`;
                     <Textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      placeholder={currentStage.hint || `请作为${roleLabel}发言...`}
+                      placeholder={stageHint}
                       className="max-h-[120px] min-h-[64px] resize-none bg-card text-sm"
                       disabled={isStreaming || asrLoading}
                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}

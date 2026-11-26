@@ -20,6 +20,7 @@ import type { CaseReference } from '@/lib/case-type';
 /** aiDrafted 里的字段名 → 教师在页面上看到的栏目名 */
 const FIELD_NAME: Record<string, string> = {
   profile: '案件基本介绍',
+  hearingSetup: '庭审设定（代理权限、证人与专家情况）',
   teach: '训练价值',
   plead: '卷宗 · 诉讼文书',
   record: '卷宗 · 询问笔录',
